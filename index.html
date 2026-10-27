@@ -643,29 +643,41 @@ const sfx = {
   portal() {
     if (!audioEnabled) return;
     const ac = getAudio(); if (!ac) return;
-    [440, 554, 659].forEach((freq, i) => {
+    // Gentle, pleasant harmonic cyber chime
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
       const osc = ac.createOscillator(), g = ac.createGain();
       osc.type = 'sine';
-      const t = ac.currentTime + i * 0.08;
+      const t = ac.currentTime + i * 0.05;
       osc.frequency.setValueAtTime(freq, t);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.4);
-      g.gain.setValueAtTime(0.2, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.12, t + 0.28);
+      g.gain.setValueAtTime(0.06, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
       osc.connect(g); g.connect(ac.destination);
-      osc.start(t); osc.stop(t + 0.45);
+      osc.start(t); osc.stop(t + 0.32);
     });
   },
   warp() {
     if (!audioEnabled) return;
     const ac = getAudio(); if (!ac) return;
+    // Quiet, smooth sci-fi quantum teleportation glide (smooth sine tones, low gain, no harsh buzzing)
     const osc = ac.createOscillator(), g = ac.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(120, ac.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1800, ac.currentTime + 1.2);
-    g.gain.setValueAtTime(0.35, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 1.4);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(680, ac.currentTime + 0.45);
+    osc.frequency.exponentialRampToValueAtTime(980, ac.currentTime + 0.85);
+    g.gain.setValueAtTime(0.07, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.9);
     osc.connect(g); g.connect(ac.destination);
-    osc.start(); osc.stop(ac.currentTime + 1.4);
+    osc.start(); osc.stop(ac.currentTime + 0.9);
+
+    const osc2 = ac.createOscillator(), g2 = ac.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(540, ac.currentTime + 0.08);
+    osc2.frequency.exponentialRampToValueAtTime(820, ac.currentTime + 0.55);
+    g2.gain.setValueAtTime(0.035, ac.currentTime + 0.08);
+    g2.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.65);
+    osc2.connect(g2); g2.connect(ac.destination);
+    osc2.start(ac.currentTime + 0.08); osc2.stop(ac.currentTime + 0.65);
   }
 };
 
@@ -810,7 +822,7 @@ const LEVELS = [
 
 let currentLevelIndex = 0;
 let levelWave = 1;
-const portal = { active: false, x: 0, y: 0, r: 44, rot: 0, pulse: 0 };
+const portal = { active: false, x: 0, y: 0, r: 46, rot: 0, pulse: 0, sparks: [] };
 let warpTimer = 0;
 let storyRunning = false;
 
@@ -957,6 +969,7 @@ function loadLevel(idx) {
   const level = LEVELS[currentLevelIndex];
   levelWave = 1;
   portal.active = false;
+  if (portal.sparks) portal.sparks.length = 0;
   warpTimer = 0;
 
   enemies.length = 0;
@@ -1745,7 +1758,7 @@ function update(dt) {
         portal.x = cx;
         portal.y = cy;
         sfx.portal();
-        shake = 10;
+        shake = 2;
         createFText(cx, cy - 65, 'QUANTUM GATEWAY OPEN! FLY WASD INSIDE!', '#00f0ff');
       }
       waveBanner = `${currentLevel.name} SECURED // FLY INTO PORTAL TO WARP`;
@@ -1756,17 +1769,44 @@ function update(dt) {
   }
   if (waveBannerTimer > 0 && waveBannerTimer < 900) waveBannerTimer -= dt;
 
-  // Quantum Portal mechanics
+  // Quantum Portal mechanics & electrical particles
   if (portal.active) {
-    portal.rot += 2.8 * dt;
-    portal.pulse = Math.sin(gameTime * 5) * 4;
+    portal.rot += 2.2 * dt;
+    portal.pulse = Math.sin(gameTime * 4) * 3;
+
+    // Spawn orbiting electric sparks
+    if (!portal.sparks) portal.sparks = [];
+    if (portal.sparks.length < 24) {
+      portal.sparks.push({
+        angle: Math.random() * Math.PI * 2,
+        dist: portal.r * (0.55 + Math.random() * 0.65),
+        speed: (2.2 + Math.random() * 2.6) * (Math.random() < 0.5 ? 1 : -1),
+        size: 1.5 + Math.random() * 2,
+        life: 0.5 + Math.random() * 0.7,
+        maxLife: 1.2,
+        color: Math.random() < 0.65 ? '#00f0ff' : '#ffffff'
+      });
+    }
+
+    for (let i = portal.sparks.length - 1; i >= 0; i--) {
+      const sp = portal.sparks[i];
+      sp.life -= dt;
+      sp.angle += sp.speed * dt;
+      sp.dist -= 7 * dt;
+      if (sp.life <= 0 || sp.dist < 5) {
+        portal.sparks.splice(i, 1);
+      }
+    }
+
     const distP = Math.hypot(nodeA.x - portal.x, nodeA.y - portal.y);
     if (distP < portal.r + nodeA.r) {
       portal.active = false;
-      warpTimer = 1.6;
+      if (portal.sparks) portal.sparks.length = 0;
+      warpTimer = 1.1;
       sfx.warp();
-      shake = 16;
-      spawnSparks(portal.x, portal.y, 40, LEVELS[currentLevelIndex].accent);
+      shake = 3;
+      spawnSparks(portal.x, portal.y, 30, '#00f0ff');
+      spawnSparks(portal.x, portal.y, 20, '#ffffff');
     }
   }
 
@@ -2132,79 +2172,145 @@ function render(dt) {
   }
   ctx.restore();
 
-  // Quantum Portal Gateway Drawing
+  // Quantum Portal Gateway Drawing (Electrical Particle Singularity)
   if (portal.active) {
     ctx.save();
     ctx.translate(portal.x, portal.y);
-    ctx.rotate(portal.rot);
-    
+
     const pr = portal.r + portal.pulse;
-    ctx.strokeStyle = '#00f0ff';
-    ctx.shadowBlur = 24;
-    ctx.shadowColor = '#00f0ff';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([12, 8]);
-    ctx.beginPath();
-    ctx.arc(0, 0, pr + 8, 0, Math.PI * 2);
-    ctx.stroke();
 
-    ctx.strokeStyle = '#ff003c';
-    ctx.shadowColor = '#ff003c';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 12]);
+    // 1. Soft glowing electric field aura
+    const auraGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, pr + 20);
+    auraGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    auraGrad.addColorStop(0.25, 'rgba(0, 240, 255, 0.22)');
+    auraGrad.addColorStop(0.65, 'rgba(0, 240, 255, 0.05)');
+    auraGrad.addColorStop(1, 'rgba(6, 7, 11, 0)');
+    ctx.fillStyle = auraGrad;
     ctx.beginPath();
-    ctx.arc(0, 0, pr, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, pr);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.3, '#00f0ff');
-    grad.addColorStop(0.7, '#1e1b4b');
-    grad.addColorStop(1, 'rgba(6, 7, 11, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, pr, 0, Math.PI * 2);
+    ctx.arc(0, 0, pr + 20, 0, Math.PI * 2);
     ctx.fill();
+
+    // 2. Dual counter-rotating electric containment rings
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = '#00f0ff';
+    ctx.lineWidth = 2.4;
+    ctx.setLineDash([10, 8]);
+    ctx.save();
+    ctx.rotate(portal.rot);
+    ctx.beginPath();
+    ctx.arc(0, 0, pr + 4, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
 
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ffffff';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([6, 10]);
     ctx.save();
-    ctx.font = 'bold 12px Consolas, monospace';
+    ctx.rotate(-portal.rot * 1.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, pr - 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.setLineDash([]);
+
+    // 3. Electrical lightning arcs crackling across the ring
+    const arcCount = 4;
+    for (let k = 0; k < arcCount; k++) {
+      const a1 = portal.rot + (k * Math.PI * 2) / arcCount;
+      const a2 = a1 + (Math.PI / 3);
+      const r1 = pr + (Math.sin(gameTime * 20 + k) * 3);
+      const r2 = pr + (Math.cos(gameTime * 22 + k) * 3);
+      const p1x = Math.cos(a1) * r1, p1y = Math.sin(a1) * r1;
+      const p2x = Math.cos(a2) * r2, p2y = Math.sin(a2) * r2;
+
+      ctx.strokeStyle = k % 2 === 0 ? '#00f0ff' : '#ffffff';
+      ctx.lineWidth = 1.6;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00f0ff';
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      const midX = (p1x + p2x) / 2 + (Math.random() - 0.5) * 8;
+      const midY = (p1y + p2y) / 2 + (Math.random() - 0.5) * 8;
+      ctx.lineTo(midX, midY);
+      ctx.lineTo(p2x, p2y);
+      ctx.stroke();
+    }
+
+    // 4. Orbiting electrical micro-particles
+    if (portal.sparks) {
+      for (const sp of portal.sparks) {
+        const sx = Math.cos(sp.angle) * sp.dist;
+        const sy = Math.sin(sp.angle) * sp.dist;
+        ctx.fillStyle = sp.color;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = sp.color;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sp.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 5. Electric discharge tendril reaching out to Node A if nearby
+    const distToShip = Math.hypot(nodeA.x - portal.x, nodeA.y - portal.y);
+    if (distToShip < pr + 110) {
+      const shipRelX = nodeA.x - portal.x, shipRelY = nodeA.y - portal.y;
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#00f0ff';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const jx = shipRelX * 0.5 + (Math.sin(gameTime * 35) * 12);
+      const jy = shipRelY * 0.5 + (Math.cos(gameTime * 30) * 12);
+      ctx.lineTo(jx, jy);
+      ctx.lineTo(shipRelX, shipRelY);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // 6. Sleek HUD Tag above portal
+    ctx.save();
+    ctx.font = 'bold 11px Consolas, monospace';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 8;
     ctx.shadowColor = '#00f0ff';
-    ctx.fillText('QUANTUM BUS PORTAL', portal.x, portal.y - portal.r - 20);
-    ctx.fillStyle = '#00ff88';
-    ctx.fillText('FLY SHIP [WASD] INSIDE TO ESCAPE!', portal.x, portal.y - portal.r - 6);
+    ctx.fillText('QUANTUM RELOCATION GATE', portal.x, portal.y - portal.r - 20);
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillText('⚡ ENTER WITH WASD TO TELEPORT ⚡', portal.x, portal.y - portal.r - 6);
     ctx.restore();
   }
 
-  // Hyperspace Warp Tunnel Animation
+  // Sleek Quantum Teleportation Animation (Gentle light streaks & electric particle burst)
   if (warpTimer > 0) {
     ctx.save();
-    const warpPct = warpTimer / 1.6;
-    ctx.fillStyle = `rgba(6, 7, 11, ${0.4 + 0.5 * (1 - warpPct)})`;
+    const warpPct = warpTimer / 1.1;
+    ctx.fillStyle = `rgba(6, 7, 11, ${0.35 * Math.sin(warpPct * Math.PI)})`;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = LEVELS[currentLevelIndex].accent;
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = LEVELS[currentLevelIndex].accent;
-    ctx.lineWidth = 3.5;
-    for (let i = 0; i < 36; i++) {
-      const a = (i * Math.PI * 2) / 36 + gameTime * 3;
-      const d1 = 40 + (1 - warpPct) * 120;
-      const d2 = d1 + 250 + Math.random() * 250;
+
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#00f0ff';
+    ctx.lineWidth = 2.2;
+    for (let i = 0; i < 24; i++) {
+      const a = (i * Math.PI * 2) / 24 + gameTime * 2;
+      const d1 = 30 + (1 - warpPct) * 160;
+      const d2 = d1 + 60 + Math.sin(i * 1.5 + gameTime * 5) * 40;
       ctx.beginPath();
       ctx.moveTo(cx + Math.cos(a) * d1, cy + Math.sin(a) * d1);
       ctx.lineTo(cx + Math.cos(a) * d2, cy + Math.sin(a) * d2);
       ctx.stroke();
     }
-    ctx.font = 'bold 22px Consolas, monospace';
+    ctx.font = 'bold 18px Consolas, monospace';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#ffffff';
-    ctx.fillText('WARPING TO NEXT HARDWARE BUS...', cx, cy);
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00f0ff';
+    ctx.fillText('TELEPORTING TO NEXT HARDWARE BUS...', cx, cy);
     ctx.restore();
   }
 
