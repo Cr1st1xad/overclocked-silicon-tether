@@ -15,10 +15,11 @@
     2. **Stage 2/4 • System RAM (DDR5 Dual-Channel Matrix)**: Electric Cyan `#00f0ff` / Blue palette, dual RAM DIMMs with golden pins & top RGB aura; 3 waves.
     3. **Stage 3/4 • Graphics Processor (RTX VRAM & Shader Die)**: Magenta `#d946ef` / Purple palette, GPU silicon die with twin-axial spinning fan blades; 4 waves.
     4. **Stage 4/4 • Central Processing Unit (CPU V-Core Matrix - Final Stand)**: ASUS ROG Crimson `#ff003c` / Gold palette, LGA socket with rotating octagonal heat ring and real-time die temp; 5 waves.
-- **Quantum Bus Gateway Portal & Hyperspace Warp**:
+- **Quantum Bus Gateway Portal & Electrical Teleportation**:
   - Spawns at canvas center once all waves for the current hardware component are cleared.
-  - Counter-rotating accretion rings with particle event horizon and procedural choir SFX.
-  - Flying Node A (<kbd>WASD</kbd> pilot) inside the portal triggers a 1.6-second hyperspace warp tunnel animation with radial light streaks and exponential audio whoosh.
+  - Multi-layer electrical field with orbiting quantum sparks, crackling lightning micro-arcs, and dynamic electromagnetic tendril reaching out to Node A.
+  - Quiet, silky sci-fi teleportation audio: gentle crystalline harmonic chime and smooth sine glide (no loud buzzing).
+  - Flying Node A inside the portal triggers a sleek 1.1s quantum teleportation animation with smooth radial dispersion.
 - **Victory Benchmark Modal (`#victoryModal`)**:
   - Triggered upon successfully defending the final CPU stage.
   - Displays final benchmark score, peak clock frequency, total malware eradicated, and system reboot option.
