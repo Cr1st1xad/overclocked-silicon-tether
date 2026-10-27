@@ -1,0 +1,2581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OVERCLOCKED: Silicon Tether</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: radial-gradient(circle at 50% 50%, #0d0f18 0%, #06070a 80%, #020305 100%); color: #f1f5f9; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Consolas, monospace; overflow: hidden; width: 100vw; height: 100vh; cursor: crosshair; user-select: none; }
+#c { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+
+/* Cyber Scanlines Overlay */
+.cyber-scanlines { position: fixed; inset: 0; pointer-events: none; z-index: 30; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), linear-gradient(90deg, rgba(255, 0, 60, 0.02), rgba(0, 240, 255, 0.02)); background-size: 100% 3px, 6px 100%; opacity: 0.75; }
+
+/* Corner ROG Decals */
+.rog-watermark-tl { position: fixed; top: 80px; left: 20px; font-size: 9px; letter-spacing: 2px; color: rgba(255, 0, 60, 0.45); text-transform: uppercase; pointer-events: none; z-index: 15; font-weight: 700; }
+.rog-watermark-tr { position: fixed; top: 80px; right: 20px; font-size: 9px; letter-spacing: 2px; color: rgba(0, 240, 255, 0.45); text-transform: uppercase; pointer-events: none; z-index: 15; font-weight: 700; text-align: right; }
+.rog-watermark-b { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: 3px; color: rgba(255, 255, 255, 0.22); text-transform: uppercase; pointer-events: none; z-index: 15; }
+
+/* Hardware Telemetry HUD (ASUS ROG Strix Chamfered Chassis) */
+#hud { position: fixed; top: 0; left: 0; width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 12px 20px; pointer-events: none; z-index: 20; }
+.panel { background: linear-gradient(135deg, rgba(16, 20, 32, 0.94) 0%, rgba(8, 10, 16, 0.97) 100%), repeating-linear-gradient(45deg, rgba(255, 0, 60, 0.02) 0px, rgba(255, 0, 60, 0.02) 2px, transparent 2px, transparent 6px); border: 1px solid rgba(255, 0, 60, 0.25); border-left: 3px solid #00f0ff; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%); padding: 10px 14px; position: relative; overflow: hidden; backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: border-color 0.25s, box-shadow 0.25s; }
+.panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #00f0ff 0%, rgba(0, 240, 255, 0.2) 100%); transition: background 0.25s; }
+.panel.hot { border-left-color: #ff003c; border-color: rgba(255, 0, 60, 0.6); box-shadow: 0 0 16px rgba(255, 0, 60, 0.35); }
+.panel.hot::before { background: linear-gradient(90deg, #ff003c 0%, #ffaa00 100%); box-shadow: 0 0 12px #ff003c; }
+
+.label { font-size: 10px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1.5px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-weight: 600; }
+.val { font-size: 22px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+.sub { font-size: 10px; color: #64748b; font-weight: normal; margin-left: 6px; }
+
+.badge { font-size: 9px; padding: 2px 7px; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.badge-cyan { background: rgba(0, 240, 255, 0.15); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 6px rgba(0, 240, 255, 0.2); }
+.badge-amber { background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.4); box-shadow: 0 0 6px rgba(255, 170, 0, 0.2); }
+.badge-red { background: rgba(255, 0, 60, 0.2); color: #ff003c; border: 1px solid rgba(255, 0, 60, 0.5); box-shadow: 0 0 8px rgba(255, 0, 60, 0.3); }
+.pulse { animation: pulseAnim 0.45s infinite alternate; }
+.flash { animation: flashAnim 0.3s infinite; }
+@keyframes pulseAnim { 0% { opacity: 0.65; transform: scale(0.96); } 100% { opacity: 1; transform: scale(1.04); box-shadow: 0 0 12px #ff003c; } }
+@keyframes flashAnim { 0%, 49% { background: #ff003c; color: #fff; box-shadow: 0 0 14px #ff003c; } 50%, 100% { background: rgba(255, 0, 60, 0.2); color: #ff003c; box-shadow: none; } }
+
+.bar-bg { height: 6px; background: rgba(255, 255, 255, 0.08); clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%); margin-top: 6px; position: relative; }
+.bar-fill { height: 100%; width: 100%; transition: width 0.05s linear, background-color 0.2s ease; }
+#tempMarker { position: absolute; top: 0; bottom: 0; left: 70%; width: 2px; background: #ffffff; box-shadow: 0 0 6px #ffffff; z-index: 2; }
+#tempBar { background: linear-gradient(90deg, #00f0ff 0%, #ffaa00 65%, #ff003c 100%); width: 40%; }
+#clockBar { background: #00f0ff; width: 0%; transition: background-color 0.2s; }
+
+#hintPill { position: fixed; bottom: 16px; left: 20px; background: rgba(14, 18, 28, 0.9); border: 1px solid rgba(255, 0, 60, 0.3); border-left: 3px solid #ff003c; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); padding: 6px 16px; font-size: 11px; color: #94a3b8; pointer-events: none; z-index: 20; letter-spacing: 1px; backdrop-filter: blur(4px); font-weight: 600; }
+#audioBtn { position: fixed; bottom: 16px; right: 20px; background: rgba(14, 18, 28, 0.9); border: 1px solid rgba(0, 240, 255, 0.3); border-right: 3px solid #00f0ff; clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); padding: 6px 16px; font-size: 11px; color: #00f0ff; cursor: pointer; pointer-events: auto; z-index: 20; font-weight: bold; font-family: inherit; transition: all 0.2s; backdrop-filter: blur(4px); }
+#audioBtn:hover { border-color: #00f0ff; box-shadow: 0 0 15px rgba(0, 240, 255, 0.5); }
+
+/* ASUS ROG Modals */
+.modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(6, 7, 11, 0.9); backdrop-filter: blur(10px); z-index: 100; opacity: 1; transition: opacity 0.3s; }
+.modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
+.rog-card { background: linear-gradient(135deg, rgba(18, 22, 34, 0.98) 0%, rgba(8, 10, 16, 0.99) 100%), repeating-linear-gradient(45deg, rgba(255, 0, 60, 0.02) 0px, rgba(255, 0, 60, 0.02) 2px, transparent 2px, transparent 8px); border: 1px solid rgba(255, 0, 60, 0.4); clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 24px 100%, 0 calc(100% - 24px)); padding: 28px 32px; max-width: 680px; width: 92%; text-align: center; box-shadow: 0 0 60px rgba(255, 0, 60, 0.22), inset 0 0 30px rgba(255, 0, 60, 0.06); color: #f1f5f9; position: relative; }
+.rog-card-alert { border-color: rgba(255, 0, 60, 0.7); box-shadow: 0 0 70px rgba(255, 0, 60, 0.35), inset 0 0 30px rgba(255, 0, 60, 0.12); }
+
+.rog-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
+.rog-logo { filter: drop-shadow(0 0 10px rgba(255, 0, 60, 0.8)); margin-bottom: 6px; }
+.rog-badge-tag { font-size: 10px; font-weight: 800; letter-spacing: 3px; color: #ff003c; text-transform: uppercase; background: rgba(255, 0, 60, 0.1); padding: 3px 10px; border: 1px solid rgba(255, 0, 60, 0.3); clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%); }
+.rog-badge-tag.alert { color: #ff003c; background: rgba(255, 0, 60, 0.2); border-color: #ff003c; animation: pulseAnim 0.5s infinite alternate; }
+
+/* Real CSS Chromatic Glitch on Titles */
+.rog-glitch { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: #ffffff; text-transform: uppercase; position: relative; display: inline-block; text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); margin-bottom: 4px; }
+.rog-glitch::before, .rog-glitch::after { content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.rog-glitch::before { left: 2px; text-shadow: -2px 0 #ff003c; clip-path: inset(20% 0 30% 0); animation: glitchAnim1 2.2s infinite linear alternate-reverse; }
+.rog-glitch::after { left: -2px; text-shadow: 2px 0 #00f0ff; clip-path: inset(50% 0 10% 0); animation: glitchAnim2 2.8s infinite linear alternate-reverse; }
+.alert-glitch::before { text-shadow: -3px 0 #ff003c; }
+.alert-glitch::after { text-shadow: 3px 0 #ffaa00; }
+
+@keyframes glitchAnim1 {
+  0% { clip-path: inset(10% 0 85% 0); transform: translate(-2px, 1px); }
+  20% { clip-path: inset(60% 0 20% 0); transform: translate(1px, -1px); }
+  40% { clip-path: inset(30% 0 50% 0); transform: translate(-1px, 2px); }
+  60% { clip-path: inset(80% 0 5% 0); transform: translate(2px, -2px); }
+  80% { clip-path: inset(15% 0 65% 0); transform: translate(-2px, 0); }
+  100% { clip-path: inset(45% 0 35% 0); transform: translate(1px, 1px); }
+}
+@keyframes glitchAnim2 {
+  0% { clip-path: inset(55% 0 30% 0); transform: translate(2px, -1px); }
+  25% { clip-path: inset(15% 0 70% 0); transform: translate(-1px, 2px); }
+  50% { clip-path: inset(85% 0 5% 0); transform: translate(1px, 0); }
+  75% { clip-path: inset(35% 0 45% 0); transform: translate(-2px, -1px); }
+  100% { clip-path: inset(5% 0 80% 0); transform: translate(2px, 1px); }
+}
+
+.modal-sub { font-size: 11px; letter-spacing: 2px; color: #94a3b8; margin-bottom: 18px; text-transform: uppercase; font-weight: 600; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; text-align: left; }
+.rog-box { background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 0, 60, 0.25); border-left: 2px solid #ff003c; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); padding: 12px; transition: border-color 0.2s; }
+.rog-box:hover { border-color: #ff003c; background: rgba(255, 0, 60, 0.04); }
+.card3-title { font-size: 11px; font-weight: 800; color: #ff003c; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+.rog-subtag { font-size: 8px; color: #00f0ff; background: rgba(0, 240, 255, 0.15); padding: 1px 4px; border-radius: 2px; }
+.card3-desc { font-size: 11px; color: #94a3b8; line-height: 1.45; }
+
+/* ROG Gaming Angular Button */
+.rog-btn { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); background: linear-gradient(135deg, #00f0ff 0%, #00b4d8 100%); color: #06070b; font-weight: 900; font-size: 13px; letter-spacing: 2px; padding: 12px 30px; border: none; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-family: inherit; margin-top: 10px; position: relative; box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+.rog-btn:hover { background: #ffffff; color: #06070b; box-shadow: 0 0 30px rgba(0, 240, 255, 0.8), 0 0 15px #ff003c; transform: translateY(-1px); }
+.rog-btn:active { transform: translateY(1px); }
+.alert-btn { background: linear-gradient(135deg, #ff003c 0%, #d50000 100%); color: #ffffff; box-shadow: 0 0 20px rgba(255, 0, 60, 0.4); }
+.alert-btn:hover { background: #ffffff; color: #ff003c; box-shadow: 0 0 30px rgba(255, 0, 60, 0.8); }
+
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 18px 0; }
+.rog-stat { background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 0, 60, 0.3); border-top: 2px solid #ff003c; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); padding: 12px; text-align: center; }
+.stat-val { font-size: 24px; font-weight: 800; color: #fff; margin-top: 4px; text-shadow: 0 0 10px rgba(255, 0, 60, 0.4); }
+.stat-lbl { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
+#bsodModal { position: fixed; inset: 0; background: #0078d7; color: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 5vw 10vw; box-sizing: border-box; user-select: none; opacity: 1; transition: opacity 0.2s ease; }
+#bsodModal.hidden { display: none; opacity: 0; pointer-events: none; }
+.bsod-face { font-size: 80px; line-height: 1; margin-bottom: 18px; font-weight: 300; }
+.bsod-msg { font-size: 22px; line-height: 1.4; margin-bottom: 20px; font-weight: 300; max-width: 900px; }
+.bsod-pct { font-size: 20px; margin-bottom: 20px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.bsod-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; max-width: 820px; margin-bottom: 22px; }
+.bsod-stat-chip { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.35); padding: 8px 12px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-family: 'Segoe UI', Consolas, monospace; }
+.bsod-stat-chip b { display: block; font-size: 18px; color: #fff; margin-top: 3px; font-weight: 700; }
+.bsod-footer { display: flex; align-items: flex-start; gap: 20px; }
+.bsod-qr { width: 85px; height: 85px; flex-shrink: 0; background: #0078d7; }
+.bsod-details { font-size: 13px; line-height: 1.55; color: #f1f5f9; font-family: 'Segoe UI', Consolas, sans-serif; }
+.bsod-details b { font-weight: 600; color: #fff; }
+.bsod-hint { margin-top: 6px; font-style: italic; color: #ffeb3b; font-size: 12px; }
+.bsod-retry-btn { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); background: #ffffff; color: #0078d7; font-weight: 900; font-size: 14px; letter-spacing: 2px; padding: 14px 34px; border: none; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-family: inherit; margin-top: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+.bsod-retry-btn:hover { background: #00f0ff; color: #06070b; box-shadow: 0 0 25px rgba(255, 255, 255, 0.9); transform: translateY(-2px); }
+.bsod-retry-btn:active { transform: translateY(1px); }
+
+/* ROG Abilities Bar */
+#skillsBar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; z-index: 50; pointer-events: none; }
+.skill-slot { background: rgba(14, 18, 28, 0.92); border: 1px solid rgba(0, 240, 255, 0.3); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); padding: 6px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(6px); transition: border-color 0.2s, box-shadow 0.2s; }
+.skill-slot.ready { border-color: #00f0ff; box-shadow: 0 0 14px rgba(0, 240, 255, 0.4); }
+.skill-slot.cooling { border-color: rgba(255, 0, 60, 0.3); opacity: 0.7; }
+.skill-key { background: #ff003c; color: #ffffff; font-weight: 900; font-size: 11px; padding: 2px 7px; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%); font-family: monospace; }
+.skill-info { display: flex; flex-direction: column; }
+.skill-name { font-size: 9px; font-weight: 800; color: #fff; letter-spacing: 1px; text-transform: uppercase; font-family: monospace; }
+.skill-cd-bar { width: 72px; height: 3px; background: rgba(255, 255, 255, 0.12); margin-top: 3px; border-radius: 1px; overflow: hidden; }
+.skill-cd-fill { height: 100%; width: 100%; background: #00f0ff; transition: width 0.08s linear; }
+
+/* Story Cutscene Modal */
+.story-container { width: 92%; max-width: 760px; display: flex; flex-direction: column; align-items: center; position: relative; }
+.browser-window { width: 100%; background: #0c1017; border: 2px solid #334155; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.85); overflow: hidden; position: relative; font-family: 'Segoe UI', Tahoma, sans-serif; }
+.browser-topbar { background: #1e293b; padding: 8px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; }
+.browser-dots { display: flex; gap: 6px; }
+.browser-dots span { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.browser-dots span:nth-child(1) { background: #ff5f56; }
+.browser-dots span:nth-child(2) { background: #ffbd2e; }
+.browser-dots span:nth-child(3) { background: #27c93f; }
+.browser-url { background: #0f172a; border-radius: 4px; padding: 4px 12px; font-size: 11px; color: #94a3b8; font-family: monospace; flex-grow: 1; text-align: left; }
+.browser-content { padding: 28px 20px; min-height: 230px; background: radial-gradient(circle at center, #1e1b4b 0%, #06070b 100%); position: relative; overflow: hidden; text-align: center; }
+.ad-title { font-size: 21px; font-weight: 900; color: #ffeb3b; text-shadow: 0 0 14px rgba(255,235,59,0.8); margin-bottom: 8px; }
+.ad-desc { font-size: 13px; color: #cbd5e1; margin-bottom: 16px; }
+.download-box { background: rgba(255,255,255,0.06); border: 1px dashed #64748b; padding: 10px 16px; border-radius: 6px; display: inline-flex; align-items: center; gap: 12px; text-align: left; margin-bottom: 18px; }
+.download-icon { font-size: 28px; }
+.download-name { font-weight: 700; color: #00f0ff; font-size: 13px; font-family: monospace; }
+.download-size { font-size: 11px; color: #94a3b8; }
+.ad-click-btn { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; font-size: 15px; font-weight: 900; padding: 14px 28px; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); transition: transform 0.1s, box-shadow 0.1s; display: inline-block; }
+.ad-click-btn.clicked { transform: scale(0.95); background: #ef4444; box-shadow: 0 0 30px #ef4444; }
+.story-cursor { position: absolute; font-size: 26px; pointer-events: none; z-index: 100; top: 25px; left: 35px; transition: all 1.8s cubic-bezier(0.25, 1, 0.5, 1); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); }
+.story-alert { margin-top: 18px; width: 100%; background: rgba(14, 18, 28, 0.96); border: 2px solid #ff003c; box-shadow: 0 0 35px rgba(255, 0, 60, 0.6); padding: 18px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.alert-banner { font-size: 18px; font-weight: 900; color: #ff003c; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 10px #ff003c; animation: alertBlink 0.6s infinite alternate; }
+@keyframes alertBlink { from { opacity: 0.8; } to { opacity: 1; transform: scale(1.02); } }
+.alert-terminal { font-family: Consolas, monospace; font-size: 11px; color: #e2e8f0; line-height: 1.6; text-align: left; background: rgba(0,0,0,0.4); padding: 12px 16px; border-left: 3px solid #ff003c; margin-bottom: 14px; }
+.story-skip-btn { position: absolute; top: -34px; right: 0; background: transparent; border: 1px solid #64748b; color: #94a3b8; font-size: 11px; padding: 4px 10px; cursor: pointer; text-transform: uppercase; font-family: inherit; }
+.story-skip-btn:hover { color: #fff; border-color: #fff; }
+
+/* Victory Modal */
+#victoryModal .rog-card { border-color: #00ff88; box-shadow: 0 0 50px rgba(0, 255, 136, 0.4); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="cyber-scanlines"></div>
+<div class="rog-watermark-tl" id="watermarkTL">STAGE 1/4 • USB BUS (MOUSE) // USB 3.2 CONTROLLER</div>
+<div class="rog-watermark-tr">AURA SYNC RGB [6.50 GHz]</div>
+<div class="rog-watermark-b">REPUBLIC OF GAMERS // FOR THOSE WHO DARE</div>
+
+<div id="hud">
+  <div class="panel" id="panel1">
+    <div class="label"><span>CORE INTEGRITY</span><span id="hpStatus" class="badge badge-cyan">ONLINE</span></div>
+    <div class="val" id="hpVal">100%</div>
+    <div class="bar-bg"><div class="bar-fill" id="hpBar" style="background:#00f0ff; width:100%;"></div></div>
+  </div>
+  <div class="panel" id="panel2">
+    <div class="label"><span>DIE TEMPERATURE</span><span id="tempBadge" class="badge badge-cyan">NOMINAL</span></div>
+    <div class="val" id="tempVal">40.0°C</div>
+    <div class="bar-bg">
+      <div id="tempMarker"></div>
+      <div class="bar-fill" id="tempBar"></div>
+    </div>
+  </div>
+  <div class="panel" id="panel3">
+    <div class="label"><span>CLOCK FREQUENCY</span><span id="clockBadge" class="badge badge-cyan">1.00X</span></div>
+    <div class="val" id="clockVal">3.80 GHz</div>
+    <div class="bar-bg"><div class="bar-fill" id="clockBar"></div></div>
+  </div>
+  <div class="panel" id="panel4">
+    <div class="label"><span>BENCHMARK SCORE</span><span id="scoreBadge" class="badge badge-cyan">1X MULT</span></div>
+    <div class="val"><span id="scoreVal">0</span><span class="sub" id="bestVal">BEST: 0</span></div>
+    <div class="bar-bg"><div class="bar-fill" id="scoreBar" style="background:rgba(0,240,255,0.4); width:100%;"></div></div>
+  </div>
+</div>
+
+<div id="skillsBar">
+  <div class="skill-slot ready" id="skillQ">
+    <div class="skill-key">Q</div>
+    <div class="skill-info">
+      <div class="skill-name">EMP DISCHARGE</div>
+      <div class="skill-cd-bar"><div class="skill-cd-fill" id="cdQ" style="width:100%;"></div></div>
+    </div>
+  </div>
+  <div class="skill-slot ready" id="skillE">
+    <div class="skill-key">E</div>
+    <div class="skill-info">
+      <div class="skill-name">CRYO NOVA</div>
+      <div class="skill-cd-bar"><div class="skill-cd-fill" id="cdE" style="width:100%;"></div></div>
+    </div>
+  </div>
+  <div class="skill-slot ready" id="skillShift">
+    <div class="skill-key">SHIFT</div>
+    <div class="skill-info">
+      <div class="skill-name">HYPER-DRIFT</div>
+      <div class="skill-cd-bar"><div class="skill-cd-fill" id="cdShift" style="width:100%;"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="hintPill">PILOT: [WASD] • TETHER: [MOUSE] • SURGE: [SPACE/LMB] • SKILLS: [Q / E / SHIFT] • HOVER CRYO (WASD 2.5S)</div>
+<button id="audioBtn">AUDIO: ON</button>
+
+<div class="modal-overlay" id="startModal">
+  <div class="modal-card rog-card">
+    <div class="rog-header">
+      <svg width="68" height="54" viewBox="0 0 100 80" class="rog-logo" fill="none">
+        <path d="M52 2 C68 2, 85 9, 96 21 C98 23, 97 26, 94 27 C87 29, 79 31, 72 33 C81 29, 88 24, 92 20 C81 11, 66 5, 52 5 C37 5, 23 11, 13 21 C9 25, 6 29, 4 34 C3 36, 1 35, 1 33 C3 27, 8 20, 14 14 C24 5, 38 2, 52 2 Z" fill="#ff003c"/>
+        <path d="M96 27 C92 35, 85 44, 77 51 C65 62, 50 71, 34 77 C25 80, 15 82, 5 82 C2 82, 1 80, 3 78 C10 73, 18 67, 25 60 C17 66, 9 72, 2 76 C14 73, 27 68, 39 60 C53 50, 64 37, 70 22 C71 20, 74 19, 75 21 C74 26, 71 32, 67 37 C75 29, 82 19, 85 9 C86 6, 89 6, 90 8 C91 13, 94 20, 96 27 Z" fill="#ff003c"/>
+        <polygon points="56,36 72,25 63,46 49,52" fill="#00f0ff"/>
+      </svg>
+      <div class="rog-badge-tag">REPUBLIC OF GAMERS // STRIX OC MATRIX</div>
+    </div>
+    <div class="rog-glitch" data-text="OVERCLOCKED: SILICON TETHER">OVERCLOCKED: SILICON TETHER</div>
+    <div class="modal-sub">ARMOURY CRATE // HARDWARE DEFENSE EMULATOR [FOR THOSE WHO DARE]</div>
+    <div class="grid3">
+      <div class="card3 rog-box">
+        <div class="card3-title"><span>PILOT &amp; ACTIVE SURGE</span><span class="rog-subtag">V-CORE</span></div>
+        <div class="card3-desc">Fly Node A with [WASD], aim Node B with [Mouse]. Hold [Space / LMB] to surge with high-voltage and slice enemies! Passive contact does not attack.</div>
+      </div>
+      <div class="card3 rog-box">
+        <div class="card3-title"><span>TACTICAL ROG SKILLS</span><span class="rog-subtag">LOADOUT</span></div>
+        <div class="card3-desc">[Q] EMP Wave (reflects bullets &amp; stuns), [E] Cryo Nova (freezes area &amp; cools -20°C), [Shift / R] Hyper-Drift (instant supersonic reel cut &amp; dash).</div>
+      </div>
+      <div class="card3 rog-box">
+        <div class="card3-title"><span>CRYO BAY FLUSH</span><span class="rog-subtag">COOLER</span></div>
+        <div class="card3-desc">Hover inside Cryo Bays with Node A [WASD] for 2.5 seconds to drain coolant, purging ALL die heat to 40°C and restoring +15% Core Integrity!</div>
+      </div>
+    </div>
+    <button class="clip-btn rog-btn" id="startBtn">START STORY // INITIATE SYSTEM</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="storyModal">
+  <div class="story-container">
+    <button class="story-skip-btn" id="storySkipBtn">SKIP INTRO [SPACE]</button>
+    <div class="browser-window">
+      <div class="browser-topbar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">http://download-more-ghz-free.xyz/boost.exe</div>
+      </div>
+      <div class="browser-content">
+        <div class="story-cursor" id="storyCursor">🖱️</div>
+        <div class="browser-ad">
+          <div class="ad-title">⚡ 100% FREE HARDWARE BOOSTER 2026 ⚡</div>
+          <div class="ad-desc">A boy is browsing the web searching for free gaming FPS boost... and finds this link:</div>
+          <div class="download-box">
+            <div class="download-icon">💾</div>
+            <div class="download-info">
+              <div class="download-name">ULTRA_OVERCLOCK_RAM_GPU_FIX.EXE</div>
+              <div class="download-size">Size: 42.0 MB • Verified: 100% Safe (Not Really)</div>
+            </div>
+          </div>
+          <div>
+            <button class="ad-click-btn" id="storyClickBtn">👉 CLICK HERE TO BOOST NOW 👈</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-alert hidden" id="storyAlert">
+      <div class="alert-banner">🚨 CRITICAL HARDWARE INFECTION! 🚨</div>
+      <div class="alert-terminal" id="storyTerminal">
+        <div>[CRITICAL] Malware binary executed via MOUSE CLICK!</div>
+        <div>[VECTOR DETECTED] Hostile virus entering through USB PERIPHERAL PORT!</div>
+        <div>[BUS MAP] MOUSE (USB) ➔ RAM (DDR5) ➔ GPU (PCIE) ➔ CPU (V-CORE)</div>
+        <div>[CONTAINMENT MISSION] Pilot the Silicon Tether from the outside in! Defend each bus and escape via the Quantum Portal before the CPU falls!</div>
+      </div>
+      <div>
+        <button class="clip-btn rog-btn alert-btn" id="storyStartBtn">DEFEND LEVEL 1: MOUSE CONTROLLER</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hidden" id="bsodModal">
+  <div class="bsod-face">:(</div>
+  <div class="bsod-msg">Your PC / Silicon Core ran into a problem that it couldn't handle and needs to restart. We're just collecting some thermal dump info, and then you can benchmark again.</div>
+  <div class="bsod-pct"><span id="bsodPercent">0</span>% complete</div>
+  
+  <div class="bsod-stats-row">
+    <div class="bsod-stat-chip">FINAL BENCHMARK<b id="bsodFinalScore">0</b></div>
+    <div class="bsod-stat-chip">PEAK FREQUENCY<b id="bsodClock">3.80 GHz</b></div>
+    <div class="bsod-stat-chip">WAVES PURGED<b id="bsodWaves">0</b></div>
+    <div class="bsod-stat-chip">MALWARE KILLED<b id="bsodKills">0</b></div>
+  </div>
+
+  <div class="bsod-footer">
+    <div class="bsod-qr">
+      <svg width="85" height="85" viewBox="0 0 33 33" shape-rendering="crispEdges">
+        <rect width="33" height="33" fill="#0078d7"/>
+        <rect x="2" y="2" width="7" height="7" fill="#ffffff"/>
+        <rect x="3" y="3" width="5" height="5" fill="#0078d7"/>
+        <rect x="4" y="4" width="3" height="3" fill="#ffffff"/>
+        <rect x="24" y="2" width="7" height="7" fill="#ffffff"/>
+        <rect x="25" y="3" width="5" height="5" fill="#0078d7"/>
+        <rect x="26" y="4" width="3" height="3" fill="#ffffff"/>
+        <rect x="2" y="24" width="7" height="7" fill="#ffffff"/>
+        <rect x="3" y="25" width="5" height="5" fill="#0078d7"/>
+        <rect x="4" y="26" width="3" height="3" fill="#ffffff"/>
+        <rect x="11" y="2" width="1" height="3" fill="#ffffff"/>
+        <rect x="13" y="2" width="2" height="1" fill="#ffffff"/>
+        <rect x="17" y="2" width="1" height="2" fill="#ffffff"/>
+        <rect x="20" y="2" width="2" height="1" fill="#ffffff"/>
+        <rect x="11" y="6" width="2" height="2" fill="#ffffff"/>
+        <rect x="15" y="5" width="3" height="2" fill="#ffffff"/>
+        <rect x="20" y="5" width="2" height="2" fill="#ffffff"/>
+        <rect x="22" y="22" width="5" height="5" fill="#ffffff"/>
+        <rect x="23" y="23" width="3" height="3" fill="#0078d7"/>
+        <rect x="24" y="24" width="1" height="1" fill="#ffffff"/>
+        <rect x="10" y="10" width="2" height="1" fill="#ffffff"/>
+        <rect x="13" y="11" width="1" height="3" fill="#ffffff"/>
+        <rect x="16" y="9" width="3" height="1" fill="#ffffff"/>
+        <rect x="11" y="14" width="1" height="2" fill="#ffffff"/>
+        <rect x="14" y="15" width="2" height="2" fill="#ffffff"/>
+        <rect x="18" y="13" width="1" height="3" fill="#ffffff"/>
+        <rect x="21" y="10" width="2" height="2" fill="#ffffff"/>
+        <rect x="25" y="11" width="3" height="1" fill="#ffffff"/>
+        <rect x="29" y="12" width="2" height="3" fill="#ffffff"/>
+        <rect x="10" y="19" width="3" height="2" fill="#ffffff"/>
+        <rect x="15" y="20" width="2" height="1" fill="#ffffff"/>
+        <rect x="18" y="18" width="3" height="2" fill="#ffffff"/>
+        <rect x="10" y="24" width="2" height="2" fill="#ffffff"/>
+        <rect x="14" y="25" width="1" height="3" fill="#ffffff"/>
+        <rect x="18" y="26" width="2" height="1" fill="#ffffff"/>
+        <rect x="11" y="29" width="3" height="2" fill="#ffffff"/>
+        <rect x="16" y="30" width="2" height="1" fill="#ffffff"/>
+        <rect x="20" y="29" width="3" height="2" fill="#ffffff"/>
+        <rect x="28" y="28" width="3" height="2" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="bsod-details">
+      <div>For more information about this thermal tragedy and possible fixes, visit https://silicon.fail/stopcode</div>
+      <div style="margin-top:6px;">If you call a support person, give them this info:</div>
+      <div>Stop code: <b id="bsodStopCode">CRITICAL_PROCESS_DIED_FROM_EXCESS_GHZ</b></div>
+      <div>What failed: <b id="bsodWhatFailed">silicon_thermal_paste_evaporation.sys</b></div>
+      <div class="bsod-hint" id="bsodHint">"Have you tried putting your CPU in a bag of uncooked rice?"</div>
+    </div>
+  </div>
+  
+  <div>
+    <button class="bsod-retry-btn" id="bsodRetryBtn">PLEASE TRY AGAIN // REBOOT SYSTEM</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="victoryModal">
+  <div class="modal-card rog-card">
+    <div class="rog-header">
+      <div class="rog-badge-tag" style="background:#00ff88; color:#06070b;">SYSTEM SECURED // OVERCLOCK MASTER</div>
+    </div>
+    <div class="rog-glitch" data-text="CPU V-CORE DEFENDED!">CPU V-CORE DEFENDED!</div>
+    <div class="modal-sub">ALL VIRUS VECTORS WIPED OUT • HARDWARE BUS PRESERVED • NO BSOD OCCURRED</div>
+    <div class="stats-grid">
+      <div class="rog-stat">
+        <div class="stat-lbl">FINAL BENCHMARK SCORE</div>
+        <div class="stat-val" id="vicScore" style="color:#00f0ff;">0</div>
+      </div>
+      <div class="rog-stat">
+        <div class="stat-lbl">PEAK HARDWARE CLOCK</div>
+        <div class="stat-val" id="vicClock" style="color:#ffaa00;">6.50 GHz</div>
+      </div>
+      <div class="rog-stat">
+        <div class="stat-lbl">MALWARE PURGED</div>
+        <div class="stat-val" id="vicKills" style="color:#00ff88;">0</div>
+      </div>
+      <div class="rog-stat">
+        <div class="stat-lbl">COMPONENTS SECURED</div>
+        <div class="stat-val" style="color:#ff003c;">4 / 4 COMPLETE</div>
+      </div>
+    </div>
+    <button class="clip-btn rog-btn" id="vicRebootBtn">REBOOT SYSTEM // OVERCLOCK BENCHMARK</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const DOM = {
+  hpBar: document.getElementById('hpBar'),
+  hpVal: document.getElementById('hpVal'),
+  hpStatus: document.getElementById('hpStatus'),
+  tempVal: document.getElementById('tempVal'),
+  tempBadge: document.getElementById('tempBadge'),
+  tempBar: document.getElementById('tempBar'),
+  tempMarker: document.getElementById('tempMarker'),
+  clockVal: document.getElementById('clockVal'),
+  clockBadge: document.getElementById('clockBadge'),
+  clockBar: document.getElementById('clockBar'),
+  scoreVal: document.getElementById('scoreVal'),
+  scoreBadge: document.getElementById('scoreBadge'),
+  scoreBar: document.getElementById('scoreBar'),
+  bestVal: document.getElementById('bestVal'),
+  audioBtn: document.getElementById('audioBtn'),
+  hintPill: document.getElementById('hintPill'),
+  startModal: document.getElementById('startModal'),
+  startBtn: document.getElementById('startBtn'),
+  panel1: document.getElementById('panel1'),
+  panel2: document.getElementById('panel2'),
+  panel3: document.getElementById('panel3'),
+  panel4: document.getElementById('panel4'),
+  bsodModal: document.getElementById('bsodModal'),
+  bsodPercent: document.getElementById('bsodPercent'),
+  bsodStopCode: document.getElementById('bsodStopCode'),
+  bsodWhatFailed: document.getElementById('bsodWhatFailed'),
+  bsodClock: document.getElementById('bsodClock'),
+  bsodHint: document.getElementById('bsodHint'),
+  bsodFinalScore: document.getElementById('bsodFinalScore'),
+  bsodWaves: document.getElementById('bsodWaves'),
+  bsodKills: document.getElementById('bsodKills'),
+  bsodRetryBtn: document.getElementById('bsodRetryBtn'),
+  skillQ: document.getElementById('skillQ'),
+  skillE: document.getElementById('skillE'),
+  skillShift: document.getElementById('skillShift'),
+  cdQ: document.getElementById('cdQ'),
+  cdE: document.getElementById('cdE'),
+  cdShift: document.getElementById('cdShift'),
+  watermarkTL: document.getElementById('watermarkTL'),
+  storyModal: document.getElementById('storyModal'),
+  storyCursor: document.getElementById('storyCursor'),
+  storyClickBtn: document.getElementById('storyClickBtn'),
+  storyAlert: document.getElementById('storyAlert'),
+  storyStartBtn: document.getElementById('storyStartBtn'),
+  storySkipBtn: document.getElementById('storySkipBtn'),
+  victoryModal: document.getElementById('victoryModal'),
+  vicScore: document.getElementById('vicScore'),
+  vicClock: document.getElementById('vicClock'),
+  vicKills: document.getElementById('vicKills'),
+  vicRebootBtn: document.getElementById('vicRebootBtn'),
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  initCircuitTraces();
+});
+
+let audioEnabled = true;
+let actx = null;
+function getAudio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) actx = new AC();
+  }
+  if (actx && actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+const sfx = {
+  reflect(temp) {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    const f = 420 + Math.min(1, Math.max(0, (temp - 40) / 60)) * (1170 - 420);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(f * 1.35, ac.currentTime + 0.1);
+    g.gain.setValueAtTime(0.24, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.12);
+  },
+  overclockReflect() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [880, 1320].forEach((freq, i) => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'triangle';
+      const t = ac.currentTime + i * 0.04;
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.16);
+    });
+  },
+  kill() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.18);
+    g.gain.setValueAtTime(0.2, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.18);
+  },
+  coreHit() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(85, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, ac.currentTime + 0.35);
+    g.gain.setValueAtTime(0.45, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.35);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.35);
+  },
+  cool() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [1350, 950, 650].forEach((freq, i) => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'sine';
+      const t = ac.currentTime + i * 0.07;
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.14);
+    });
+  },
+  overheat() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [0, 0.09, 0.18].forEach(dtTime => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'sawtooth';
+      const t = ac.currentTime + dtTime;
+      osc.frequency.setValueAtTime(840, t);
+      g.gain.setValueAtTime(0.26, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.06);
+    });
+  },
+  surgeTick() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(130, ac.currentTime);
+    g.gain.setValueAtTime(0.08, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.04);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.04);
+  },
+  bsodGlitch() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(360, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(65, ac.currentTime + 0.35);
+    g.gain.setValueAtTime(0.32, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.38);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.38);
+  },
+  emp() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(480, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(45, ac.currentTime + 0.32);
+    g.gain.setValueAtTime(0.35, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.32);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.32);
+  },
+  freeze() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [1600, 1100, 700].forEach((freq, i) => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'sine';
+      const t = ac.currentTime + i * 0.05;
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.6, t + 0.18);
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.18);
+    });
+  },
+  dash() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(200, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(950, ac.currentTime + 0.15);
+    g.gain.setValueAtTime(0.25, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.15);
+  },
+  mouseClick() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ac.currentTime + 0.05);
+    g.gain.setValueAtTime(0.3, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 0.05);
+  },
+  siren() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [0, 0.15].forEach(tOffset => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'sawtooth';
+      const t = ac.currentTime + tOffset;
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.linearRampToValueAtTime(620, t + 0.12);
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.12);
+    });
+  },
+  portal() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    [440, 554, 659].forEach((freq, i) => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = 'sine';
+      const t = ac.currentTime + i * 0.08;
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.4);
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      osc.connect(g); g.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.45);
+    });
+  },
+  warp() {
+    if (!audioEnabled) return;
+    const ac = getAudio(); if (!ac) return;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1800, ac.currentTime + 1.2);
+    g.gain.setValueAtTime(0.35, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 1.4);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(); osc.stop(ac.currentTime + 1.4);
+  }
+};
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  DOM.audioBtn.textContent = audioEnabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+  DOM.audioBtn.style.color = audioEnabled ? '#00f0ff' : '#64748b';
+  if (audioEnabled) getAudio();
+}
+DOM.audioBtn.addEventListener('click', toggleAudio);
+
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyM') toggleAudio();
+  if (e.code === 'KeyB') {
+    if (gameState === 'PLAYING') {
+      triggerBSOD(false);
+    }
+  }
+  if (gameState === 'STORY' && (e.code === 'Space' || e.code === 'Enter')) {
+    beginGameFromStory();
+  }
+  if (gameState === 'PLAYING') {
+    if (e.code === 'KeyQ') castEMP();
+    if (e.code === 'KeyE') castCryoBomb();
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyR') castHyperDrift();
+  }
+  if (bsodActive && (e.code === 'Enter' || e.code === 'Space')) {
+    retryFromBSOD();
+  }
+  getAudio();
+});
+window.addEventListener('keyup', e => {
+  keys[e.code] = false;
+});
+
+const mouse = { x: W / 2, y: H / 2, isDown: false };
+window.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+window.addEventListener('mousedown', e => {
+  if (e.button === 0) mouse.isDown = true;
+  getAudio();
+});
+window.addEventListener('mouseup', e => {
+  if (e.button === 0) mouse.isDown = false;
+});
+
+const traces = [];
+function initCircuitTraces() {
+  traces.length = 0;
+  for (let i = 0; i < 18; i++) {
+    const isH = Math.random() < 0.5;
+    const x1 = Math.random() * W, y1 = Math.random() * H;
+    const len = 180 + Math.random() * 320;
+    traces.push({
+      x1, y1,
+      x2: isH ? x1 + len : x1,
+      y2: isH ? y1 : y1 + len,
+      packetT: Math.random(),
+      speed: 0.12 + Math.random() * 0.2
+    });
+  }
+}
+initCircuitTraces();
+
+let gameState = 'BOOT';
+let coreIntegrity = 100;
+let temp = 40.0;
+let score = 0;
+let bestScore = parseInt(localStorage.getItem('silicon_tether_best') || '0', 10);
+DOM.bestVal.textContent = 'BEST: ' + bestScore.toLocaleString();
+
+let peakClock = 3.80;
+let wave = 1;
+let enemiesKilledCount = 0;
+let throttleTimer = 0;
+let surgeSoundTimer = 0;
+let cryoSpawnTimer = 4.0;
+let waveBanner = '';
+let waveBannerTimer = 0;
+let waveIntermissionTimer = 0;
+let shake = 0;
+let gameTime = 0;
+
+const LEVELS = [
+  {
+    index: 0,
+    name: "USB 3.2 CONTROLLER",
+    subtitle: "MOUSE BUFFER // PERIPHERAL BUS",
+    location: "STAGE 1/4 • USB BUS (MOUSE)",
+    accent: "#00ff88",
+    secAccent: "#ffaa00",
+    bgGrid: "rgba(0, 255, 136, 0.05)",
+    coreLabel: "OPTICAL SENSOR",
+    wavesToClear: 3,
+    startTemp: 40.0,
+    enemyTypes: [0, 1]
+  },
+  {
+    index: 1,
+    name: "DDR5 RAM MATRIX",
+    subtitle: "SYSTEM MEMORY // DUAL-CHANNEL BUS",
+    location: "STAGE 2/4 • SYSTEM RAM",
+    accent: "#00f0ff",
+    secAccent: "#3b82f6",
+    bgGrid: "rgba(0, 240, 255, 0.05)",
+    coreLabel: "DDR5 DIMM",
+    wavesToClear: 3,
+    startTemp: 42.0,
+    enemyTypes: [0, 1, 3]
+  },
+  {
+    index: 2,
+    name: "RTX GPU PROCESSOR",
+    subtitle: "VRAM & SHADER ARRAY // PCIE 5.0",
+    location: "STAGE 3/4 • GRAPHICS DIE",
+    accent: "#d946ef",
+    secAccent: "#8b5cf6",
+    bgGrid: "rgba(217, 70, 239, 0.05)",
+    coreLabel: "GPU DIE",
+    wavesToClear: 4,
+    startTemp: 46.0,
+    enemyTypes: [0, 1, 2, 4]
+  },
+  {
+    index: 3,
+    name: "CPU V-CORE MATRIX",
+    subtitle: "CENTRAL PROCESSING UNIT // FINAL STAND",
+    location: "STAGE 4/4 • CPU V-CORE (FINAL)",
+    accent: "#ff003c",
+    secAccent: "#ffd700",
+    bgGrid: "rgba(255, 0, 60, 0.06)",
+    coreLabel: "CPU DIE",
+    wavesToClear: 5,
+    startTemp: 50.0,
+    enemyTypes: [0, 1, 2, 3, 4, 5]
+  }
+];
+
+let currentLevelIndex = 0;
+let levelWave = 1;
+const portal = { active: false, x: 0, y: 0, r: 44, rot: 0, pulse: 0 };
+let warpTimer = 0;
+let storyRunning = false;
+
+const abilities = {
+  emp: { cd: 7.5, timer: 0 },
+  cryo: { cd: 11.0, timer: 0 },
+  drift: { cd: 5.0, timer: 0 }
+};
+let dashInvulnTimer = 0;
+const empWaves = [];
+const cryoZones = [];
+
+const nodeA = { x: W / 2 - 120, y: H / 2, vx: 0, vy: 0, r: 13 };
+const nodeB = { x: W / 2 + 120, y: H / 2, r: 11 };
+
+const enemies = [];
+const bullets = [];
+const cryoPads = [];
+const parts = [];
+const fTexts = [];
+const waveQueue = [];
+
+const bsodStopCodes = [
+  'CRITICAL_PROCESS_DIED_FROM_EXCESS_GHZ',
+  'DPC_WATCHDOG_VIOLATION (DOG_RAN_AWAY_FROM_HEAT)',
+  'KMODE_EXCEPTION_NOT_HANDLED (MAGIC_SMOKE_RELEASED)',
+  'SYSTEM_THREAD_EXCEPTION (THERMAL_PASTE_EVAPORATED)',
+  'PAGE_FAULT_IN_NONPAGED_AREA (SOCKET_MELTED_THROUGH_DESK)',
+  'UNEXPECTED_KERNEL_MODE_TRAP (COOLER_UNPLUGGED_FOR_AESTHETICS)',
+  'WHEA_UNCORRECTABLE_ERROR (OVERVOLTED_TO_ORBIT)',
+  'KERNEL_SECURITY_CHECK_FAILURE (SILICON_REFUSED_TO_COMPLY)'
+];
+
+const bsodWhatFailedList = [
+  'silicon_thermal_paste_evaporation.sys',
+  'intel_amd_peace_treaty_violation.dll',
+  'quantum_tether_overcurrent.sys',
+  'box_fan_inadequate_rpm.drv',
+  'liquid_nitrogen_spill.sys',
+  'rgb_lighting_overconsumption.sys',
+  'case_airflow_obstruction_by_cat.sys'
+];
+
+const bsodHints = [
+  '"Have you tried putting your CPU in a bag of uncooked rice?"',
+  '"Submerging motherboard in iced sweet tea will void the manufacturer warranty."',
+  '"Silicon Tether recommends a minimum of 4 industrial jet engines for cooling."',
+  '"Error 0x42: Your CPU fan was spinning backwards for increased aerodynamic drag."',
+  '"Fun Fact: At 6.50 GHz, your silicon core was hot enough to fry an egg."',
+  '"Tip: Opening Task Manager will not scare the malware away."',
+  '"Did you remember to peel off the plastic film on the bottom of the heatsink?"',
+  '"Pro tip: Downloading more RAM does not increase thermal dissipation."'
+];
+
+let bsodActive = false;
+let bsodInterval = null;
+
+function triggerBSOD(fromDeath = true) {
+  if (bsodActive) return;
+  bsodActive = true;
+  gameState = 'BSOD';
+  sfx.bsodGlitch();
+
+  DOM.bsodStopCode.textContent = bsodStopCodes[Math.floor(Math.random() * bsodStopCodes.length)];
+  DOM.bsodWhatFailed.textContent = bsodWhatFailedList[Math.floor(Math.random() * bsodWhatFailedList.length)];
+  DOM.bsodHint.textContent = bsodHints[Math.floor(Math.random() * bsodHints.length)];
+  DOM.bsodClock.textContent = peakClock.toFixed(2) + ' GHz';
+  DOM.bsodFinalScore.textContent = score.toLocaleString();
+  DOM.bsodWaves.textContent = (wave - 1).toString();
+  DOM.bsodKills.textContent = enemiesKilledCount.toString();
+
+  DOM.bsodModal.classList.remove('hidden');
+
+  let pct = 0;
+  DOM.bsodPercent.textContent = '0';
+  if (bsodInterval) clearInterval(bsodInterval);
+
+  bsodInterval = setInterval(() => {
+    pct += Math.floor(Math.random() * 20) + 12;
+    if (pct >= 100) {
+      pct = 100;
+      clearInterval(bsodInterval);
+      bsodInterval = null;
+    }
+    DOM.bsodPercent.textContent = pct.toString();
+  }, 260);
+}
+
+function retryFromBSOD() {
+  if (bsodInterval) { clearInterval(bsodInterval); bsodInterval = null; }
+  bsodActive = false;
+  DOM.bsodModal.classList.add('hidden');
+  resetGame();
+  gameState = 'PLAYING';
+  getAudio();
+}
+
+function startStoryCutscene() {
+  gameState = 'STORY';
+  DOM.startModal.classList.add('hidden');
+  DOM.storyModal.classList.remove('hidden');
+  DOM.storyAlert.classList.add('hidden');
+  DOM.storyClickBtn.classList.remove('clicked');
+  DOM.storyCursor.style.top = '25px';
+  DOM.storyCursor.style.left = '35px';
+
+  storyRunning = true;
+
+  setTimeout(() => {
+    if (!storyRunning) return;
+    const btnRect = DOM.storyClickBtn.getBoundingClientRect();
+    const contRect = DOM.storyModal.querySelector('.browser-content').getBoundingClientRect();
+    const targetX = btnRect.left - contRect.left + btnRect.width / 2;
+    const targetY = btnRect.top - contRect.top + btnRect.height / 2;
+    DOM.storyCursor.style.left = `${targetX}px`;
+    DOM.storyCursor.style.top = `${targetY}px`;
+  }, 250);
+
+  setTimeout(() => {
+    if (!storyRunning) return;
+    triggerInfectionAlert();
+  }, 2100);
+}
+
+function triggerInfectionAlert() {
+  DOM.storyClickBtn.classList.add('clicked');
+  sfx.mouseClick();
+  setTimeout(() => {
+    DOM.storyAlert.classList.remove('hidden');
+    sfx.siren();
+  }, 200);
+}
+
+function beginGameFromStory() {
+  storyRunning = false;
+  DOM.storyModal.classList.add('hidden');
+  resetGame();
+  gameState = 'PLAYING';
+  getAudio();
+}
+
+function loadLevel(idx) {
+  currentLevelIndex = Math.max(0, Math.min(LEVELS.length - 1, idx));
+  const level = LEVELS[currentLevelIndex];
+  levelWave = 1;
+  portal.active = false;
+  warpTimer = 0;
+
+  enemies.length = 0;
+  bullets.length = 0;
+  cryoPads.length = 0;
+  parts.length = 0;
+  fTexts.length = 0;
+  waveQueue.length = 0;
+
+  nodeA.x = W / 2 - 100;
+  nodeA.y = H / 2;
+  nodeA.vx = 0; nodeA.vy = 0;
+  nodeB.x = W / 2 + 100;
+  nodeB.y = H / 2;
+
+  temp = Math.max(40.0, level.startTemp);
+  coreIntegrity = Math.min(100, coreIntegrity + 20);
+
+  if (DOM.watermarkTL) DOM.watermarkTL.textContent = `${level.location} // ${level.name}`;
+  createFText(W / 2, H / 2 - 60, `WARPED INTO ${level.name}!`, level.accent);
+  sfx.cool();
+
+  startWave(1);
+}
+
+function triggerVictory() {
+  gameState = 'VICTORY';
+  DOM.vicScore.textContent = score.toLocaleString();
+  DOM.vicClock.textContent = peakClock.toFixed(2) + ' GHz';
+  DOM.vicKills.textContent = enemiesKilledCount.toString();
+  DOM.victoryModal.classList.remove('hidden');
+}
+
+function resetGame() {
+  if (bsodActive) { bsodActive = false; if (bsodInterval) clearInterval(bsodInterval); DOM.bsodModal.classList.add('hidden'); }
+  DOM.victoryModal.classList.add('hidden');
+  DOM.storyModal.classList.add('hidden');
+  DOM.startModal.classList.add('hidden');
+
+  coreIntegrity = 100;
+  temp = 40.0;
+  score = 0;
+  peakClock = 3.80;
+  wave = 1;
+  enemiesKilledCount = 0;
+  throttleTimer = 0;
+  surgeSoundTimer = 0;
+  cryoSpawnTimer = 5.0;
+  waveBannerTimer = 0;
+  waveIntermissionTimer = 0;
+  shake = 0;
+  gameTime = 0;
+
+  abilities.emp.timer = 0;
+  abilities.cryo.timer = 0;
+  abilities.drift.timer = 0;
+  dashInvulnTimer = 0;
+  empWaves.length = 0;
+  cryoZones.length = 0;
+
+  loadLevel(0);
+}
+
+function startWave(w) {
+  levelWave = w;
+  wave = (currentLevelIndex * 3) + w;
+  waveQueue.length = 0;
+  waveIntermissionTimer = 0;
+  portal.active = false;
+
+  const currentLevel = LEVELS[currentLevelIndex];
+  const speedScale = 1 + (w - 1) * 0.06 + currentLevelIndex * 0.1;
+  const interval = Math.max(0.6, 1.8 - (w - 1) * 0.15 - currentLevelIndex * 0.15);
+
+  const swarms = 3 + w * 2 + currentLevelIndex * 2;
+  const snipers = currentLevel.enemyTypes.includes(1) ? Math.floor(w * 0.8) + currentLevelIndex : 0;
+  const heavies = currentLevel.enemyTypes.includes(2) ? Math.floor((w - 1) * 0.6) + 1 : 0;
+  const interceptors = currentLevel.enemyTypes.includes(3) ? Math.floor((w - 1) * 1.0) + 1 : 0;
+  const firewalls = currentLevel.enemyTypes.includes(4) ? Math.floor((w - 1) * 0.7) + 1 : 0;
+  const trojans = currentLevel.enemyTypes.includes(5) ? Math.floor((w - 1) * 0.5) + 1 : 0;
+
+  for (let i = 0; i < swarms; i++) {
+    waveQueue.push({ type: 0, delay: 1.0 + i * interval + Math.random() * 0.3, speedScale });
+  }
+  for (let i = 0; i < snipers; i++) {
+    waveQueue.push({ type: 1, delay: 2.0 + i * (interval * 1.5) + Math.random() * 0.4, speedScale });
+  }
+  for (let i = 0; i < heavies; i++) {
+    waveQueue.push({ type: 2, delay: 3.5 + i * (interval * 2.0) + Math.random() * 0.5, speedScale });
+  }
+  for (let i = 0; i < interceptors; i++) {
+    waveQueue.push({ type: 3, delay: 2.5 + i * (interval * 1.4) + Math.random() * 0.4, speedScale });
+  }
+  for (let i = 0; i < firewalls; i++) {
+    waveQueue.push({ type: 4, delay: 4.5 + i * (interval * 2.2) + Math.random() * 0.5, speedScale });
+  }
+  for (let i = 0; i < trojans; i++) {
+    waveQueue.push({ type: 5, delay: 6.0 + i * (interval * 2.8) + Math.random() * 0.6, speedScale });
+  }
+
+  waveBanner = `${currentLevel.name} // WAVE ${w}/${currentLevel.wavesToClear}`;
+  waveBannerTimer = 2.8;
+  sfx.cool();
+}
+
+function spawnEnemy(type, speedScale = 1) {
+  const edge = Math.floor(Math.random() * 4);
+  let x = 0, y = 0;
+  if (edge === 0) { x = Math.random() * W; y = -30; }
+  else if (edge === 1) { x = W + 30; y = Math.random() * H; }
+  else if (edge === 2) { x = Math.random() * W; y = H + 30; }
+  else { x = -30; y = Math.random() * H; }
+
+  if (type === 0) {
+    // Swarm: Dives to core
+    enemies.push({ type: 0, x, y, r: 12, hp: 1, maxHp: 1, speed: (105 + Math.random() * 20) * speedScale });
+  } else if (type === 1) {
+    // Sniper: Orbits and fires precision bolts
+    enemies.push({
+      type: 1, x, y, r: 14, hp: 1, maxHp: 1,
+      speed: 95 * speedScale, orbitR: 260 + Math.random() * 30,
+      orbitAngle: Math.random() * Math.PI * 2,
+      orbitSpeed: (0.45 + Math.random() * 0.2) * speedScale,
+      fireTimer: (2.6 + Math.random() * 1.2) / speedScale,
+      inOrbit: false
+    });
+  } else if (type === 2) {
+    // Heavy Malware: Slow march + spread shots
+    enemies.push({
+      type: 2, x, y, r: 20, hp: 3, maxHp: 3,
+      speed: 52 * speedScale,
+      fireTimer: (3.4 + Math.random() * 1.2) / speedScale
+    });
+  } else if (type === 3) {
+    // Interceptor: Hunts Node A (player pilot)!
+    enemies.push({
+      type: 3, x, y, r: 13, hp: 1, maxHp: 1,
+      speed: (125 + Math.random() * 20) * speedScale
+    });
+  } else if (type === 4) {
+    // Firewall Shield Core: Directional rotating barrier
+    enemies.push({
+      type: 4, x, y, r: 18, hp: 3, maxHp: 3,
+      speed: 48 * speedScale,
+      shieldAngle: Math.random() * Math.PI * 2
+    });
+  } else if (type === 5) {
+    // Trojan Carrier: Spawns mini swarms
+    enemies.push({
+      type: 5, x, y, r: 24, hp: 5, maxHp: 5,
+      speed: 38 * speedScale,
+      spawnTimer: 4.0 / speedScale
+    });
+  }
+}
+
+function spawnCryoPad() {
+  const cx = W / 2, cy = H / 2;
+  const ang = Math.random() * Math.PI * 2;
+  const dist = 140 + Math.random() * 220;
+  const px = Math.max(70, Math.min(W - 70, cx + Math.cos(ang) * dist));
+  const py = Math.max(120, Math.min(H - 80, cy + Math.sin(ang) * dist));
+  cryoPads.push({
+    x: px, y: py, r: 34,
+    life: 28.0,
+    holdTime: 0,
+    holdMax: 2.5,
+    draining: false
+  });
+  createFText(px, py - 35, 'CRYO BAY DETECTED // HOVER WITH WASD', '#00f0ff');
+}
+
+function spawnSparks(x, y, count, color) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 60 + Math.random() * 220;
+    parts.push({
+      x, y,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd,
+      size: 2.5 + Math.random() * 2.5,
+      life: 0.3 + Math.random() * 0.4,
+      maxLife: 0.7,
+      color: color || '#00f0ff'
+    });
+  }
+}
+
+function createFText(x, y, text, color) {
+  fTexts.push({ x, y, vy: -55, text, color: color || '#00f0ff', life: 1.1, maxLife: 1.1 });
+}
+
+function distToSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+function getNearestEnemy(x, y) {
+  let near = null, minDist = Infinity;
+  for (const e of enemies) {
+    const d = Math.hypot(e.x - x, e.y - y);
+    if (d < minDist) { minDist = d; near = e; }
+  }
+  return near;
+}
+
+function castEMP() {
+  if (gameState !== 'PLAYING' || abilities.emp.timer > 0) return;
+  abilities.emp.timer = abilities.emp.cd;
+  sfx.emp();
+  shake = 8;
+  empWaves.push({ x: nodeA.x, y: nodeA.y, r: 10, maxR: 240, life: 0.35, maxLife: 0.35 });
+  createFText(nodeA.x, nodeA.y - 30, 'OVERVOLT EMP DISCHARGE!', '#00f0ff');
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    if (b.hostile && Math.hypot(b.x - nodeA.x, b.y - nodeA.y) < 240) {
+      b.hostile = false;
+      b.color = '#00f0ff';
+      b.homing = true;
+      b.dmg = 2;
+      b.trail = [];
+      const target = getNearestEnemy(b.x, b.y);
+      const ang = target ? Math.atan2(target.y - b.y, target.x - b.x) : Math.random() * Math.PI * 2;
+      b.vx = Math.cos(ang) * 620;
+      b.vy = Math.sin(ang) * 620;
+      spawnSparks(b.x, b.y, 6, '#00f0ff');
+    }
+  }
+  for (const e of enemies) {
+    if (Math.hypot(e.x - nodeA.x, e.y - nodeA.y) < 240) {
+      e.stunTimer = Math.max(e.stunTimer || 0, 2.0);
+      spawnSparks(e.x, e.y, 8, '#00f0ff');
+    }
+  }
+}
+
+function castCryoBomb() {
+  if (gameState !== 'PLAYING' || abilities.cryo.timer > 0) return;
+  abilities.cryo.timer = abilities.cryo.cd;
+  sfx.freeze();
+  shake = 6;
+  const targetX = nodeB.x, targetY = nodeB.y;
+  cryoZones.push({ x: targetX, y: targetY, r: 170, life: 3.5, maxLife: 3.5 });
+  temp = Math.max(40.0, temp - 20.0);
+  createFText(targetX, targetY - 30, 'CRYO NOVA! -20°C FREEZE', '#00f0ff');
+  spawnSparks(targetX, targetY, 30, '#00f0ff');
+  for (const e of enemies) {
+    if (Math.hypot(e.x - targetX, e.y - targetY) < 170) {
+      e.freezeTimer = 3.5;
+      spawnSparks(e.x, e.y, 12, '#00f0ff');
+    }
+  }
+}
+
+function castHyperDrift() {
+  if (gameState !== 'PLAYING' || abilities.drift.timer > 0) return;
+  abilities.drift.timer = abilities.drift.cd;
+  sfx.dash();
+  shake = 12;
+  dashInvulnTimer = 0.4;
+  const oldAx = nodeA.x, oldAy = nodeA.y;
+  nodeA.x = nodeB.x;
+  nodeA.y = nodeB.y;
+  nodeA.vx = 0; nodeA.vy = 0;
+  spawnSparks(oldAx, oldAy, 20, '#00f0ff');
+  spawnSparks(nodeA.x, nodeA.y, 25, '#ff003c');
+  createFText(nodeA.x, nodeA.y - 30, 'HYPER-DRIFT! REEL CUT', '#ff003c');
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const d = distToSeg(e, { x: oldAx, y: oldAy }, nodeA);
+    if (d < e.r + 20) {
+      e.hp -= 3;
+      spawnSparks(e.x, e.y, 16, '#ff003c');
+      if (e.hp <= 0) {
+        enemies.splice(i, 1);
+        enemiesKilledCount++;
+        const pts = (e.type === 5 ? 600 : e.type === 4 ? 350 : e.type === 3 ? 150 : e.type === 2 ? 400 : e.type === 1 ? 200 : 100) * (temp >= 70 ? 5 : 1);
+        score += pts;
+        sfx.kill();
+        createFText(e.x, e.y, `+${pts} SLICED`, '#ff003c');
+      }
+    }
+  }
+}
+
+function update(dt) {
+  gameTime += dt;
+  const cx = W / 2, cy = H / 2;
+  const isOverclock = temp >= 70.0;
+  const mult = isOverclock ? 5 : 1;
+
+  if (throttleTimer > 0) {
+    throttleTimer -= dt;
+    temp = Math.max(40.0, temp - 14.0 * dt);
+  }
+
+  let isSurge = false;
+  if (throttleTimer <= 0) {
+    isSurge = !!(keys['Space'] || mouse.isDown);
+    if (isSurge) {
+      temp += 22.0 * dt;
+      surgeSoundTimer -= dt;
+      if (surgeSoundTimer <= 0) {
+        sfx.surgeTick();
+        surgeSoundTimer = 0.11;
+      }
+    } else {
+      temp = Math.max(40.0, temp - 4.5 * dt);
+    }
+  }
+
+  if (temp >= 100.0 && throttleTimer <= 0) {
+    temp = 100.0;
+    throttleTimer = 2.5;
+    shake = 16;
+    sfx.overheat();
+    createFText(nodeA.x, nodeA.y - 35, 'THERMAL THROTTLE! LOCKDOWN', '#ff003c');
+  }
+
+  const currentGhz = 3.8 + ((temp - 40) / 60) * 2.7;
+  if (currentGhz > peakClock) peakClock = currentGhz;
+  score += Math.round(currentGhz * 8 * mult * dt);
+
+  // Pilot Node A Physics
+  let ix = 0, iy = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) iy -= 1;
+  if (keys['KeyS'] || keys['ArrowDown']) iy += 1;
+  if (keys['KeyA'] || keys['ArrowLeft']) ix -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) ix += 1;
+  const iLen = Math.hypot(ix, iy);
+  if (iLen > 0) { ix /= iLen; iy /= iLen; }
+
+  const targetSpeed = 430;
+  const lerpA = 1 - Math.exp(-14 * dt);
+  nodeA.vx += (ix * targetSpeed - nodeA.vx) * lerpA;
+  nodeA.vy += (iy * targetSpeed - nodeA.vy) * lerpA;
+  nodeA.x += nodeA.vx * dt;
+  nodeA.y += nodeA.vy * dt;
+  nodeA.x = Math.max(nodeA.r + 5, Math.min(W - nodeA.r - 5, nodeA.x));
+  nodeA.y = Math.max(nodeA.r + 65, Math.min(H - nodeA.r - 20, nodeA.y));
+
+  // Ability Cooldown Timers & HUD updates
+  if (abilities.emp.timer > 0) abilities.emp.timer = Math.max(0, abilities.emp.timer - dt);
+  if (abilities.cryo.timer > 0) abilities.cryo.timer = Math.max(0, abilities.cryo.timer - dt);
+  if (abilities.drift.timer > 0) abilities.drift.timer = Math.max(0, abilities.drift.timer - dt);
+  if (dashInvulnTimer > 0) dashInvulnTimer -= dt;
+
+  const qPct = 1 - (abilities.emp.timer / abilities.emp.cd);
+  DOM.cdQ.style.width = (qPct * 100) + '%';
+  DOM.skillQ.className = 'skill-slot ' + (abilities.emp.timer <= 0 ? 'ready' : 'cooling');
+
+  const ePct = 1 - (abilities.cryo.timer / abilities.cryo.cd);
+  DOM.cdE.style.width = (ePct * 100) + '%';
+  DOM.skillE.className = 'skill-slot ' + (abilities.cryo.timer <= 0 ? 'ready' : 'cooling');
+
+  const sPct = 1 - (abilities.drift.timer / abilities.drift.cd);
+  DOM.cdShift.style.width = (sPct * 100) + '%';
+  DOM.skillShift.className = 'skill-slot ' + (abilities.drift.timer <= 0 ? 'ready' : 'cooling');
+
+  // EMP wave animation
+  for (let i = empWaves.length - 1; i >= 0; i--) {
+    const emp = empWaves[i];
+    emp.life -= dt;
+    emp.r = emp.maxR * (1 - emp.life / emp.maxLife);
+    if (emp.life <= 0) empWaves.splice(i, 1);
+  }
+
+  // Cryo zone animation
+  for (let i = cryoZones.length - 1; i >= 0; i--) {
+    const cz = cryoZones[i];
+    cz.life -= dt;
+    if (cz.life <= 0) cryoZones.splice(i, 1);
+  }
+
+  // Node B Clamped Exponential Follow
+  const dx = mouse.x - nodeA.x;
+  const dy = mouse.y - nodeA.y;
+  const dMouse = Math.hypot(dx, dy);
+  const maxDist = 380;
+  let targetBx = mouse.x, targetBy = mouse.y;
+  if (dMouse > maxDist) {
+    targetBx = nodeA.x + (dx / dMouse) * maxDist;
+    targetBy = nodeA.y + (dy / dMouse) * maxDist;
+  }
+  const lerpB = 1 - Math.exp(-32 * dt);
+  nodeB.x += (targetBx - nodeB.x) * lerpB;
+  nodeB.y += (targetBy - nodeB.y) * lerpB;
+
+  // Active Surge Direct Slicing along segment AB (requires active Space / LMB)
+  if (isSurge && throttleTimer <= 0) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      const d = distToSeg(e, nodeA, nodeB);
+      if (d < e.r + 10) {
+        if (e.type === 4) {
+          const tetherMidX = (nodeA.x + nodeB.x) / 2, tetherMidY = (nodeA.y + nodeB.y) / 2;
+          const hitAng = Math.atan2(tetherMidY - e.y, tetherMidX - e.x);
+          let dAng = Math.abs(hitAng - (e.shieldAngle || 0));
+          while (dAng > Math.PI) dAng = Math.abs(dAng - Math.PI * 2);
+          if (dAng < 0.9) {
+            spawnSparks(e.x, e.y, 2, '#00f0ff');
+            continue;
+          }
+        }
+        const sliceDmg = (isOverclock ? 32.0 : 16.0) * dt;
+        e.hp -= sliceDmg;
+        spawnSparks(e.x, e.y, 3, isOverclock ? '#ff003c' : '#00f0ff');
+        if (e.hp <= 0) {
+          enemies.splice(i, 1);
+          enemiesKilledCount++;
+          const pts = (e.type === 5 ? 600 : e.type === 4 ? 350 : e.type === 3 ? 150 : e.type === 2 ? 400 : e.type === 1 ? 200 : 100) * mult;
+          score += pts;
+          sfx.kill();
+          shake = Math.max(shake, 6);
+          spawnSparks(e.x, e.y, 16, isOverclock ? '#ff003c' : '#00f0ff');
+          createFText(e.x, e.y, `+${pts} VAPORIZED`, isOverclock ? '#ff003c' : '#00f0ff');
+        }
+      }
+    }
+  }
+
+  // Cryo Pads Spawning and Node A WASD Hold Draining (2.5s)
+  cryoSpawnTimer -= dt;
+  if ((cryoSpawnTimer <= 0 || (temp > 68 && cryoPads.length === 0)) && cryoPads.length < 2) {
+    spawnCryoPad();
+    cryoSpawnTimer = 8.0;
+  }
+
+  for (let i = cryoPads.length - 1; i >= 0; i--) {
+    const pad = cryoPads[i];
+    pad.life -= dt;
+    const dA = Math.hypot(nodeA.x - pad.x, nodeA.y - pad.y);
+    if (dA < pad.r + nodeA.r) {
+      pad.draining = true;
+      pad.holdTime += dt;
+      temp = Math.max(40.0, temp - 10.0 * dt);
+      spawnSparks(nodeA.x, nodeA.y, 1, '#00f0ff');
+      if (pad.holdTime >= pad.holdMax) {
+        temp = 40.0;
+        coreIntegrity = Math.min(100, coreIntegrity + 15);
+        sfx.cool();
+        spawnSparks(pad.x, pad.y, 35, '#00f0ff');
+        shake = Math.max(shake, 6);
+        createFText(pad.x, pad.y, 'COOLANT DRAINED! -ALL HEAT +15% HP', '#00f0ff');
+        cryoPads.splice(i, 1);
+        continue;
+      }
+    } else {
+      pad.draining = false;
+      if (pad.holdTime > 0) pad.holdTime = Math.max(0, pad.holdTime - dt * 0.7);
+    }
+    if (pad.life <= 0) cryoPads.splice(i, 1);
+  }
+
+  // Wave queue spawning
+  for (let i = waveQueue.length - 1; i >= 0; i--) {
+    waveQueue[i].delay -= dt;
+    if (waveQueue[i].delay <= 0) {
+      spawnEnemy(waveQueue[i].type, waveQueue[i].speedScale || 1);
+      waveQueue.splice(i, 1);
+    }
+  }
+
+  // Enemies update (Slow-mo under Overclock: dtEnemy = dt * 0.55)
+  const dtEnemy = isOverclock ? dt * 0.55 : dt;
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (e.freezeTimer > 0) {
+      e.freezeTimer -= dt;
+      continue;
+    }
+    if (e.stunTimer > 0) {
+      e.stunTimer -= dt;
+      continue;
+    }
+    const edx = cx - e.x, edy = cy - e.y;
+    const distCore = Math.hypot(edx, edy);
+
+    if (e.type === 0) {
+      // Swarm: dives to core
+      if (distCore > 0) {
+        e.x += (edx / distCore) * e.speed * dtEnemy;
+        e.y += (edy / distCore) * e.speed * dtEnemy;
+      }
+      if (distCore < 38 + e.r) {
+        coreIntegrity -= 6;
+        sfx.coreHit();
+        shake = 10;
+        spawnSparks(e.x, e.y, 16, '#ff003c');
+        createFText(cx, cy - 20, '-6% INTEGRITY', '#ff003c');
+        enemies.splice(i, 1);
+        continue;
+      }
+    } else if (e.type === 1) {
+      // Sniper: orbits and fires precision bolts
+      if (!e.inOrbit) {
+        if (distCore > e.orbitR) {
+          e.x += (edx / distCore) * e.speed * dtEnemy;
+          e.y += (edy / distCore) * e.speed * dtEnemy;
+        } else {
+          e.inOrbit = true;
+          e.orbitAngle = Math.atan2(e.y - cy, e.x - cx);
+        }
+      } else {
+        e.orbitAngle += e.orbitSpeed * dtEnemy;
+        e.x = cx + Math.cos(e.orbitAngle) * e.orbitR;
+        e.y = cy + Math.sin(e.orbitAngle) * e.orbitR;
+      }
+
+      e.fireTimer -= dtEnemy;
+      if (e.fireTimer <= 0) {
+        e.fireTimer = 2.6;
+        const bAng = Math.atan2(cy - e.y, cx - e.x);
+        bullets.push({
+          x: e.x, y: e.y,
+          vx: Math.cos(bAng) * 165,
+          vy: Math.sin(bAng) * 165,
+          r: 4.5, hostile: true, homing: false,
+          color: '#ffaa00', life: 6.0
+        });
+      }
+    } else if (e.type === 2) {
+      // Heavy Malware: slow march + 3-way spread
+      if (distCore > 0) {
+        e.x += (edx / distCore) * e.speed * dtEnemy;
+        e.y += (edy / distCore) * e.speed * dtEnemy;
+      }
+      if (distCore < 38 + e.r) {
+        coreIntegrity -= 12;
+        sfx.coreHit();
+        shake = 18;
+        spawnSparks(e.x, e.y, 22, '#ff003c');
+        createFText(cx, cy - 20, '-12% CRITICAL HIT', '#ff003c');
+        enemies.splice(i, 1);
+        continue;
+      }
+
+      e.fireTimer -= dtEnemy;
+      if (e.fireTimer <= 0) {
+        e.fireTimer = 3.4;
+        const baseA = Math.atan2(cy - e.y, cx - e.x);
+        const offsets = wave >= 4 ? [-0.32, -0.16, 0, 0.16, 0.32] : [-0.24, 0, 0.24];
+        offsets.forEach(off => {
+          bullets.push({
+            x: e.x, y: e.y,
+            vx: Math.cos(baseA + off) * 145,
+            vy: Math.sin(baseA + off) * 145,
+            r: 5, hostile: true, homing: false,
+            color: '#e024c3', life: 6.0
+          });
+        });
+      }
+    } else if (e.type === 3) {
+      // Interceptor: Hunts Node A (player pilot)!
+      const adx = nodeA.x - e.x, ady = nodeA.y - e.y;
+      const distA = Math.hypot(adx, ady);
+      if (distA > 0) {
+        e.x += (adx / distA) * e.speed * dtEnemy;
+        e.y += (ady / distA) * e.speed * dtEnemy;
+      }
+      if (distA < nodeA.r + e.r) {
+        if (dashInvulnTimer <= 0) {
+          coreIntegrity -= 8;
+          sfx.coreHit();
+          shake = 12;
+          spawnSparks(e.x, e.y, 18, '#ff003c');
+          createFText(nodeA.x, nodeA.y - 25, '-8% RAM COLLISION', '#ff003c');
+        }
+        enemies.splice(i, 1);
+        continue;
+      }
+    } else if (e.type === 4) {
+      // Firewall Shield Core: Rotates directional shield barrier
+      e.shieldAngle = (e.shieldAngle || 0) + 1.2 * dtEnemy;
+      if (distCore > 0) {
+        e.x += (edx / distCore) * e.speed * dtEnemy;
+        e.y += (edy / distCore) * e.speed * dtEnemy;
+      }
+      if (distCore < 38 + e.r) {
+        coreIntegrity -= 14;
+        sfx.coreHit();
+        shake = 15;
+        spawnSparks(e.x, e.y, 20, '#ff003c');
+        createFText(cx, cy - 20, '-14% SHIELD BREACH', '#ff003c');
+        enemies.splice(i, 1);
+        continue;
+      }
+    } else if (e.type === 5) {
+      // Trojan Carrier: Spawns mini swarms periodically
+      if (distCore > 0) {
+        e.x += (edx / distCore) * e.speed * dtEnemy;
+        e.y += (edy / distCore) * e.speed * dtEnemy;
+      }
+      e.spawnTimer -= dtEnemy;
+      if (e.spawnTimer <= 0) {
+        e.spawnTimer = 4.0;
+        enemies.push({ type: 0, x: e.x + 14, y: e.y + 14, r: 10, hp: 1, maxHp: 1, speed: 110 });
+        enemies.push({ type: 0, x: e.x - 14, y: e.y - 14, r: 10, hp: 1, maxHp: 1, speed: 110 });
+        createFText(e.x, e.y - 20, 'TROJAN MITES UNPACKED', '#ff003c');
+        spawnSparks(e.x, e.y, 12, '#ff003c');
+      }
+      if (distCore < 38 + e.r) {
+        coreIntegrity -= 20;
+        sfx.coreHit();
+        shake = 20;
+        spawnSparks(e.x, e.y, 24, '#ff003c');
+        createFText(cx, cy - 20, '-20% CARRIER IMPACT', '#ff003c');
+        enemies.splice(i, 1);
+        continue;
+      }
+    }
+  }
+
+  // Bullets update & reflection
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    const bDt = b.hostile ? dtEnemy : dt;
+
+    if (b.homing && !b.hostile) {
+      const target = getNearestEnemy(b.x, b.y);
+      if (target) {
+        const tAng = Math.atan2(target.y - b.y, target.x - b.x);
+        const curAng = Math.atan2(b.vy, b.vx);
+        let diff = tAng - curAng;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        const newAng = curAng + diff * Math.min(1, 9 * bDt);
+        b.vx = Math.cos(newAng) * 620;
+        b.vy = Math.sin(newAng) * 620;
+      }
+      if (!b.trail) b.trail = [];
+      b.trail.push({ x: b.x, y: b.y, life: 0.25 });
+    }
+
+    b.x += b.vx * bDt;
+    b.y += b.vy * bDt;
+    b.life -= bDt;
+
+    if (b.trail) {
+      for (let t = b.trail.length - 1; t >= 0; t--) {
+        b.trail[t].life -= bDt;
+        if (b.trail[t].life <= 0) b.trail.splice(t, 1);
+      }
+    }
+
+    // Hostile bullet hits tether: DEFLECTION
+    if (b.hostile && throttleTimer <= 0) {
+      const dSeg = distToSeg(b, nodeA, nodeB);
+      if (dSeg < b.r + 9) {
+        temp = Math.min(100.0, temp + 3.8);
+        b.hostile = false;
+        const target = getNearestEnemy(b.x, b.y);
+
+        if (isOverclock) {
+          sfx.overclockReflect();
+          score += 250;
+          createFText(b.x, b.y, 'OVERCLOCK DEFLECT! 3X DMG', '#ff003c');
+          spawnSparks(b.x, b.y, 10, '#ff003c');
+          b.homing = true;
+          b.dmg = 3;
+          b.color = '#ff003c';
+          b.trail = [];
+          const baseAng = target ? Math.atan2(target.y - b.y, target.x - b.x) : Math.atan2(b.vy, b.vx);
+          b.vx = Math.cos(baseAng - 0.22) * 640;
+          b.vy = Math.sin(baseAng - 0.22) * 640;
+
+          // Split into 2 curving Homing Lasers with 3 DMG each
+          bullets.push({
+            x: b.x, y: b.y,
+            vx: Math.cos(baseAng + 0.22) * 640,
+            vy: Math.sin(baseAng + 0.22) * 640,
+            r: 4, hostile: false, homing: true, dmg: 3,
+            trail: [], color: '#00f0ff', life: 4.5
+          });
+        } else {
+          sfx.reflect(temp);
+          score += 50;
+          createFText(b.x, b.y, 'DEFLECT! 2X DMG', '#00f0ff');
+          spawnSparks(b.x, b.y, 8, '#00f0ff');
+          b.dmg = 2;
+          b.color = '#00f0ff';
+          if (target) {
+            const ang = Math.atan2(target.y - b.y, target.x - b.x);
+            b.vx = Math.cos(ang) * 620;
+            b.vy = Math.sin(ang) * 620;
+          } else {
+            const segDx = nodeB.x - nodeA.x, segDy = nodeB.y - nodeA.y;
+            const segLen = Math.hypot(segDx, segDy) || 1;
+            const nx = -segDy / segLen, ny = segDx / segLen;
+            const dot = b.vx * nx + b.vy * ny;
+            b.vx = (b.vx - 2 * dot * nx);
+            b.vy = (b.vy - 2 * dot * ny);
+            const curSpd = Math.hypot(b.vx, b.vy) || 1;
+            b.vx = (b.vx / curSpd) * 620;
+            b.vy = (b.vy / curSpd) * 620;
+          }
+        }
+        continue;
+      }
+    }
+
+    // Hostile bullet hits core
+    if (b.hostile) {
+      const dCore = Math.hypot(b.x - cx, b.y - cy);
+      if (dCore < 38 + b.r) {
+        coreIntegrity -= 4;
+        sfx.coreHit();
+        shake = 7;
+        spawnSparks(b.x, b.y, 10, '#ff003c');
+        createFText(cx, cy - 20, '-4% CORE HIT', '#ff003c');
+        bullets.splice(i, 1);
+        continue;
+      }
+    } else {
+      // Friendly reflected bullet hits enemy
+      let hit = false;
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
+          if (e.type === 4) {
+            const hitAng = Math.atan2(b.y - e.y, b.x - e.x);
+            let dAng = Math.abs(hitAng - (e.shieldAngle || 0));
+            while (dAng > Math.PI) dAng = Math.abs(dAng - Math.PI * 2);
+            if (dAng < 0.9) {
+              spawnSparks(b.x, b.y, 6, '#00ffcc');
+              createFText(e.x, e.y - 12, 'SHIELD DEFLECTION!', '#00ffcc');
+              hit = true;
+              break;
+            }
+          }
+          const dmg = b.dmg || 2;
+          e.hp -= dmg;
+          spawnSparks(b.x, b.y, 10, b.color || '#00f0ff');
+          shake = Math.max(shake, 4);
+          createFText(e.x, e.y - 12, `-${dmg} HIT!`, b.color || '#00f0ff');
+          if (e.hp <= 0) {
+            enemies.splice(j, 1);
+            enemiesKilledCount++;
+            const pts = (e.type === 5 ? 600 : e.type === 4 ? 350 : e.type === 3 ? 150 : e.type === 2 ? 400 : e.type === 1 ? 200 : 100) * mult;
+            score += pts;
+            sfx.kill();
+            shake = Math.max(shake, 7);
+            spawnSparks(e.x, e.y, 18, '#00f0ff');
+            createFText(e.x, e.y, `+${pts} DESTROYED`, '#00f0ff');
+          }
+          hit = true;
+          break;
+        }
+      }
+      if (hit) {
+        bullets.splice(i, 1);
+        continue;
+      }
+    }
+
+    if (b.life <= 0 || b.x < -100 || b.x > W + 100 || b.y < -100 || b.y > H + 100) {
+      bullets.splice(i, 1);
+    }
+  }
+
+  // Wave Progression with Quantum Portal Gateway Escape
+  if (waveQueue.length === 0 && enemies.length === 0) {
+    const currentLevel = LEVELS[currentLevelIndex];
+    if (levelWave < currentLevel.wavesToClear) {
+      if (waveIntermissionTimer <= 0) {
+        waveIntermissionTimer = 4.0;
+        sfx.cool();
+        createFText(cx, cy - 40, 'BUS VENTILATION ACTIVE', currentLevel.accent);
+      } else {
+        waveIntermissionTimer -= dt;
+        temp = Math.max(40.0, temp - 15.0 * dt);
+        waveBanner = `WAVE ${levelWave}/${currentLevel.wavesToClear} PURGED // NEXT INTRUSION IN ${Math.max(1, Math.ceil(waveIntermissionTimer))}S`;
+        waveBannerTimer = 1.1;
+        if (waveIntermissionTimer <= 0) {
+          startWave(levelWave + 1);
+        }
+      }
+    } else {
+      // Level cleared! Open Quantum Portal!
+      if (!portal.active) {
+        portal.active = true;
+        portal.x = cx;
+        portal.y = cy;
+        sfx.portal();
+        shake = 10;
+        createFText(cx, cy - 65, 'QUANTUM GATEWAY OPEN! FLY WASD INSIDE!', '#00f0ff');
+      }
+      waveBanner = `${currentLevel.name} SECURED // FLY INTO PORTAL TO WARP`;
+      waveBannerTimer = 999;
+    }
+  } else {
+    waveIntermissionTimer = 0;
+  }
+  if (waveBannerTimer > 0 && waveBannerTimer < 900) waveBannerTimer -= dt;
+
+  // Quantum Portal mechanics
+  if (portal.active) {
+    portal.rot += 2.8 * dt;
+    portal.pulse = Math.sin(gameTime * 5) * 4;
+    const distP = Math.hypot(nodeA.x - portal.x, nodeA.y - portal.y);
+    if (distP < portal.r + nodeA.r) {
+      portal.active = false;
+      warpTimer = 1.6;
+      sfx.warp();
+      shake = 16;
+      spawnSparks(portal.x, portal.y, 40, LEVELS[currentLevelIndex].accent);
+    }
+  }
+
+  // Hyperspace warp timer
+  if (warpTimer > 0) {
+    warpTimer -= dt;
+    if (warpTimer <= 0) {
+      if (currentLevelIndex + 1 < LEVELS.length) {
+        loadLevel(currentLevelIndex + 1);
+      } else {
+        triggerVictory();
+      }
+    }
+  }
+
+  // Sparks and floating texts
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    if (p.life <= 0) parts.splice(i, 1);
+  }
+  for (let i = fTexts.length - 1; i >= 0; i--) {
+    const f = fTexts[i];
+    f.y += f.vy * dt;
+    f.life -= dt;
+    if (f.life <= 0) fTexts.splice(i, 1);
+  }
+
+  // Update Telemetry HUD
+  coreIntegrity = Math.max(0, Math.min(100, coreIntegrity));
+  DOM.hpVal.textContent = Math.round(coreIntegrity) + '%';
+  DOM.hpBar.style.width = coreIntegrity + '%';
+  if (coreIntegrity > 55) {
+    DOM.hpStatus.textContent = 'ONLINE';
+    DOM.hpStatus.className = 'badge badge-cyan';
+    DOM.hpBar.style.backgroundColor = '#00f0ff';
+  } else if (coreIntegrity >= 25) {
+    DOM.hpStatus.textContent = 'WARNING';
+    DOM.hpStatus.className = 'badge badge-amber';
+    DOM.hpBar.style.backgroundColor = '#ffaa00';
+  } else {
+    DOM.hpStatus.textContent = 'CRITICAL';
+    DOM.hpStatus.className = 'badge badge-red pulse';
+    DOM.hpBar.style.backgroundColor = '#ff003c';
+  }
+
+  DOM.tempVal.textContent = temp.toFixed(1) + '°C';
+  DOM.tempBar.style.width = Math.min(100, Math.max(0, temp)) + '%';
+  if (throttleTimer > 0) {
+    DOM.tempBadge.textContent = 'THERMAL THROTTLE!';
+    DOM.tempBadge.className = 'badge badge-red flash';
+    DOM.panel2.classList.add('hot');
+  } else if (isOverclock) {
+    DOM.tempBadge.textContent = 'OVERCLOCK 5X!';
+    DOM.tempBadge.className = 'badge badge-red pulse';
+    DOM.panel2.classList.add('hot');
+  } else if (temp >= 58.0) {
+    DOM.tempBadge.textContent = 'WARM';
+    DOM.tempBadge.className = 'badge badge-amber';
+    DOM.panel2.classList.remove('hot');
+  } else {
+    DOM.tempBadge.textContent = 'NOMINAL';
+    DOM.tempBadge.className = 'badge badge-cyan';
+    DOM.panel2.classList.remove('hot');
+  }
+
+  const clockMult = (1 + ((temp - 40) / 60) * 0.71).toFixed(2);
+  DOM.clockVal.textContent = currentGhz.toFixed(2) + ' GHz';
+  DOM.clockBadge.textContent = clockMult + 'X';
+  DOM.clockBar.style.width = Math.min(100, Math.max(0, ((temp - 40) / 60) * 100)) + '%';
+  if (isOverclock) {
+    DOM.panel3.classList.add('hot');
+    DOM.clockBadge.className = 'badge badge-red pulse';
+    DOM.clockBar.style.backgroundColor = '#ff003c';
+  } else {
+    DOM.panel3.classList.remove('hot');
+    DOM.clockBadge.className = 'badge badge-cyan';
+    DOM.clockBar.style.backgroundColor = '#00f0ff';
+  }
+
+  DOM.scoreVal.textContent = score.toLocaleString();
+  if (isOverclock) {
+    DOM.scoreBadge.textContent = '5X MULT';
+    DOM.scoreBadge.className = 'badge badge-red pulse';
+    DOM.panel4.classList.add('hot');
+  } else {
+    DOM.scoreBadge.textContent = '1X MULT';
+    DOM.scoreBadge.className = 'badge badge-cyan';
+    DOM.panel4.classList.remove('hot');
+  }
+
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem('silicon_tether_best', bestScore);
+    DOM.bestVal.textContent = 'BEST: ' + bestScore.toLocaleString();
+  }
+
+  // Check Game Over / Trigger BSOD
+  if (coreIntegrity <= 0 && gameState === 'PLAYING') {
+    coreIntegrity = 0;
+    triggerBSOD(true);
+  }
+}
+
+function render(dt) {
+  const cx = W / 2, cy = H / 2;
+  const isOverclock = temp >= 70.0;
+  ctx.save();
+  if (shake > 0) {
+    const sx = (Math.random() - 0.5) * shake;
+    const sy = (Math.random() - 0.5) * shake;
+    ctx.translate(sx, sy);
+    shake = Math.max(0, shake - dt * 25);
+  }
+
+  ctx.fillStyle = '#06070b';
+  ctx.fillRect(0, 0, W, H);
+
+  // 55px Background Grid (Cyan alpha 0.04)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+  ctx.lineWidth = 1;
+  const gridSz = 55;
+  ctx.beginPath();
+  for (let x = 0; x < W; x += gridSz) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = 0; y < H; y += gridSz) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+  ctx.restore();
+
+  // 18 Circuit Traces & Glowing Data Packets
+  ctx.save();
+  for (const tr of traces) {
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tr.x1, tr.y1);
+    ctx.lineTo(tr.x2, tr.y2);
+    ctx.stroke();
+
+    tr.packetT = (tr.packetT + tr.speed * dt) % 1;
+    const px = tr.x1 + (tr.x2 - tr.x1) * tr.packetT;
+    const py = tr.y1 + (tr.y2 - tr.y1) * tr.packetT;
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#00f0ff';
+    ctx.fillRect(px - 2, py - 2, 4, 4);
+  }
+  ctx.restore();
+
+  // Red vignette during Overclock
+  if (temp >= 70.0) {
+    ctx.save();
+    const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(255, 0, 60, 0)');
+    vig.addColorStop(1, 'rgba(255, 0, 60, 0.28)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Cryo Pads
+  for (const pad of cryoPads) {
+    ctx.save();
+    ctx.strokeStyle = '#00f0ff';
+    // Cryo Cooling Pads with Hold Radial Progress
+    ctx.strokeStyle = pad.draining ? '#ffffff' : '#00f0ff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = pad.draining ? 18 : 10;
+    ctx.shadowColor = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(pad.x, pad.y, pad.r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = pad.draining ? 'rgba(0, 240, 255, 0.25)' : 'rgba(0, 240, 255, 0.08)';
+    ctx.beginPath();
+    ctx.arc(pad.x, pad.y, pad.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Progress Arc when draining
+    if (pad.holdTime > 0) {
+      const pct = Math.min(1, pad.holdTime / pad.holdMax);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(pad.x, pad.y, pad.r + 4, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CRYO BAY', pad.x, pad.y - 2);
+    ctx.fillStyle = pad.draining ? '#ffeb3b' : '#00f0ff';
+    const statusText = pad.draining ? `${Math.floor((pad.holdTime / pad.holdMax) * 100)}% DRAINED` : 'WASD 2.5S';
+    ctx.fillText(statusText, pad.x, pad.y + 10);
+    ctx.restore();
+  }
+
+  // EMP waves & Cryo Zones
+  for (const emp of empWaves) {
+    ctx.save();
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 4 * (emp.life / emp.maxLife);
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(emp.x, emp.y, emp.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  for (const cz of cryoZones) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 240, 255, ' + (0.15 * (cz.life / cz.maxLife)) + ')';
+    ctx.strokeStyle = 'rgba(165, 243, 252, ' + (0.8 * (cz.life / cz.maxLife)) + ')';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(cz.x, cz.y, cz.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Central Component Core (reflects Level 0: Mouse USB, Level 1: RAM, Level 2: GPU, Level 3: CPU)
+  const currentLvl = LEVELS[currentLevelIndex] || LEVELS[0];
+  const coreColor = isOverclock ? '#ff003c' : currentLvl.accent;
+
+  ctx.save();
+  // Outer pulsing sine dash shield ring at radius + 10px
+  ctx.strokeStyle = coreColor;
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = coreColor;
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, 50 + Math.sin(gameTime * 3) * 3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (currentLevelIndex === 0) {
+    // LEVEL 1: MOUSE / USB 3.2 CONTROLLER
+    ctx.fillStyle = '#0c1017';
+    ctx.strokeStyle = coreColor;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(cx - 24, cy - 20, 48, 40);
+    ctx.fillRect(cx - 24, cy - 20, 48, 40);
+
+    ctx.fillStyle = '#94a3b8';
+    [-14, -6, 2, 10].forEach(py => {
+      ctx.fillRect(cx - 28, cy + py, 4, 3);
+      ctx.fillRect(cx + 24, cy + py, 4, 3);
+    });
+
+    const mAngle = Math.atan2(mouse.y - cy, mouse.x - cx);
+    ctx.fillStyle = coreColor;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(mAngle) * 5, cy + Math.sin(mAngle) * 5, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0, 255, 136, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(mouse.x, mouse.y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('USB SENSOR', cx, cy - 24);
+
+  } else if (currentLevelIndex === 1) {
+    // LEVEL 2: DDR5 SYSTEM RAM
+    [-16, 8].forEach(xOff => {
+      ctx.fillStyle = '#0c1017';
+      ctx.strokeStyle = coreColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx + xOff - 7, cy - 30, 14, 60);
+      ctx.fillRect(cx + xOff - 7, cy - 30, 14, 60);
+
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(cx + xOff - 6, cy + 26, 12, 3);
+
+      ctx.fillStyle = '#00f0ff';
+      ctx.fillRect(cx + xOff - 6, cy - 29, 12, 5);
+    });
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('DDR5 RAM', cx, cy - 36);
+
+  } else if (currentLevelIndex === 2) {
+    // LEVEL 3: RTX GPU PROCESSOR
+    ctx.fillStyle = '#0c1017';
+    ctx.strokeStyle = coreColor;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(cx - 36, cy - 22, 72, 44);
+    ctx.fillRect(cx - 36, cy - 22, 72, 44);
+
+    [-18, 18].forEach((xOff, fIdx) => {
+      const fanX = cx + xOff, fanY = cy;
+      ctx.strokeStyle = '#d946ef';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(fanX, fanY, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const fRot = gameTime * (fIdx === 0 ? 12 : -12);
+      for (let b = 0; b < 4; b++) {
+        const bAng = fRot + (b * Math.PI) / 2;
+        ctx.beginPath();
+        ctx.moveTo(fanX, fanY);
+        ctx.lineTo(fanX + Math.cos(bAng) * 12, fanY + Math.sin(bAng) * 12);
+        ctx.stroke();
+      }
+    });
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('RTX GPU DIE', cx, cy - 28);
+
+  } else {
+    // LEVEL 4: CPU V-CORE MATRIX (FINAL STAND)
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const rot = gameTime * 0.75;
+    for (let i = 0; i < 8; i++) {
+      const a = rot + (i * Math.PI) / 4;
+      const px = cx + Math.cos(a) * 38;
+      const py = cy + Math.sin(a) * 38;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(14, 18, 28, 0.7)';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - 22, cy - 22, 44, 44);
+
+    ctx.fillStyle = '#0e121c';
+    ctx.strokeStyle = '#ff003c';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${Math.round(temp)}°`, cx, cy + 1);
+
+    ctx.fillStyle = '#ff003c';
+    ctx.font = 'bold 8px Consolas, monospace';
+    ctx.fillText('CPU V-CORE', cx, cy - 42);
+  }
+  ctx.restore();
+
+  // Quantum Portal Gateway Drawing
+  if (portal.active) {
+    ctx.save();
+    ctx.translate(portal.x, portal.y);
+    ctx.rotate(portal.rot);
+    
+    const pr = portal.r + portal.pulse;
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = '#00f0ff';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 8]);
+    ctx.beginPath();
+    ctx.arc(0, 0, pr + 8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ff003c';
+    ctx.shadowColor = '#ff003c';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 12]);
+    ctx.beginPath();
+    ctx.arc(0, 0, pr, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, pr);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#00f0ff');
+    grad.addColorStop(0.7, '#1e1b4b');
+    grad.addColorStop(1, 'rgba(6, 7, 11, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, pr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.font = 'bold 12px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00f0ff';
+    ctx.fillText('QUANTUM BUS PORTAL', portal.x, portal.y - portal.r - 20);
+    ctx.fillStyle = '#00ff88';
+    ctx.fillText('FLY SHIP [WASD] INSIDE TO ESCAPE!', portal.x, portal.y - portal.r - 6);
+    ctx.restore();
+  }
+
+  // Hyperspace Warp Tunnel Animation
+  if (warpTimer > 0) {
+    ctx.save();
+    const warpPct = warpTimer / 1.6;
+    ctx.fillStyle = `rgba(6, 7, 11, ${0.4 + 0.5 * (1 - warpPct)})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = LEVELS[currentLevelIndex].accent;
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = LEVELS[currentLevelIndex].accent;
+    ctx.lineWidth = 3.5;
+    for (let i = 0; i < 36; i++) {
+      const a = (i * Math.PI * 2) / 36 + gameTime * 3;
+      const d1 = 40 + (1 - warpPct) * 120;
+      const d2 = d1 + 250 + Math.random() * 250;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * d1, cy + Math.sin(a) * d1);
+      ctx.lineTo(cx + Math.cos(a) * d2, cy + Math.sin(a) * d2);
+      ctx.stroke();
+    }
+    ctx.font = 'bold 22px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#ffffff';
+    ctx.fillText('WARPING TO NEXT HARDWARE BUS...', cx, cy);
+    ctx.restore();
+  }
+
+  // Dual-Node Tether Visuals & Mechanics
+  // Guideline: Subtle dashed circle (radius 380px) around Node A
+  ctx.save();
+  ctx.setLineDash([4, 8]);
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(nodeA.x, nodeA.y, 380, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Faint dashed targeting line to physical mouse if cursor extends beyond 380px
+  const distCur = Math.hypot(mouse.x - nodeA.x, mouse.y - nodeA.y);
+  if (distCur > 380) {
+    ctx.setLineDash([3, 6]);
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.28)';
+    ctx.beginPath();
+    ctx.moveTo(nodeB.x, nodeB.y);
+    ctx.lineTo(mouse.x, mouse.y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Plasma Tether Line (5-segment electric lightning line)
+  ctx.save();
+  const isSurge = !!(keys['Space'] || mouse.isDown) && throttleTimer <= 0;
+  if (throttleTimer > 0) {
+    ctx.strokeStyle = '#ff003c';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(nodeA.x, nodeA.y);
+    ctx.lineTo(nodeB.x, nodeB.y);
+    ctx.stroke();
+  } else {
+    const pts = [];
+    const segs = 5;
+    const tdx = nodeB.x - nodeA.x, tdy = nodeB.y - nodeA.y;
+    const tLen = Math.hypot(tdx, tdy) || 1;
+    const nx = -tdy / tLen, ny = tdx / tLen;
+    const jitterAmp = isSurge ? 8 : 4;
+
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      let px = nodeA.x + tdx * t;
+      let py = nodeA.y + tdy * t;
+      if (i > 0 && i < segs) {
+        const jit = (Math.sin(gameTime * 36 + i * 2.4) + Math.cos(gameTime * 24 - i * 1.8)) * jitterAmp * 0.5;
+        px += nx * jit;
+        py += ny * jit;
+      }
+      pts.push({ x: px, y: py });
+    }
+
+    // Outer pass
+    ctx.lineWidth = isSurge ? 6.5 : 3.5;
+    ctx.strokeStyle = coreColor;
+    ctx.shadowBlur = isSurge ? 20 : 10;
+    ctx.shadowColor = coreColor;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+
+    // Inner core pass
+    ctx.lineWidth = isSurge ? 2.5 : 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Node A (Pilot)
+  ctx.save();
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#00f0ff';
+  ctx.fillStyle = '#0e121c';
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(nodeA.x, nodeA.y, nodeA.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#00f0ff';
+  ctx.beginPath();
+  ctx.arc(nodeA.x, nodeA.y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Node B (Mouse): Radius 11px with rotating dashed outer ring
+  ctx.save();
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = coreColor;
+  ctx.strokeStyle = coreColor;
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.arc(nodeB.x, nodeB.y, nodeB.r + 3, gameTime * 3, gameTime * 3 + Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#0e121c';
+  ctx.beginPath();
+  ctx.arc(nodeB.x, nodeB.y, nodeB.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = coreColor;
+  ctx.beginPath();
+  ctx.arc(nodeB.x, nodeB.y, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Enemies
+  for (const e of enemies) {
+    ctx.save();
+    if (e.type === 0) {
+      // Swarm: red triangle pointing to core
+      const a = Math.atan2(cy - e.y, cx - e.x);
+      ctx.translate(e.x, e.y);
+      ctx.rotate(a);
+      ctx.strokeStyle = '#ff003c';
+      ctx.fillStyle = 'rgba(255, 0, 60, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#ff003c';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(e.r, 0);
+      ctx.lineTo(-e.r * 0.8, -e.r * 0.7);
+      ctx.lineTo(-e.r * 0.8, e.r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (e.type === 1) {
+      // Sniper: amber diamond
+      ctx.translate(e.x, e.y);
+      ctx.rotate(gameTime * 2);
+      ctx.strokeStyle = '#ffaa00';
+      ctx.fillStyle = 'rgba(255, 170, 0, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#ffaa00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -e.r);
+      ctx.lineTo(e.r, 0);
+      ctx.lineTo(0, e.r);
+      ctx.lineTo(-e.r, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (e.type === 2) {
+      // Heavy Malware: magenta hexagon with mini-health bar
+      ctx.translate(e.x, e.y);
+      ctx.strokeStyle = '#e024c3';
+      ctx.fillStyle = 'rgba(224, 36, 195, 0.2)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#e024c3';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) {
+        const ha = (k * Math.PI) / 3;
+        const hx = Math.cos(ha) * e.r, hy = Math.sin(ha) * e.r;
+        if (k === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Mini-health bar
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect(-15, -e.r - 9, 30, 4);
+      ctx.fillStyle = '#e024c3';
+      ctx.fillRect(-15, -e.r - 9, (e.hp / e.maxHp) * 30, 4);
+    } else if (e.type === 3) {
+      // Interceptor: red sleek dart pointing to Node A
+      const a = Math.atan2(nodeA.y - e.y, nodeA.x - e.x);
+      ctx.translate(e.x, e.y);
+      ctx.rotate(a);
+      ctx.strokeStyle = '#ff003c';
+      ctx.fillStyle = 'rgba(255, 0, 60, 0.35)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ff003c';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(e.r + 3, 0);
+      ctx.lineTo(-e.r, -e.r * 0.75);
+      ctx.lineTo(-e.r * 0.35, 0);
+      ctx.lineTo(-e.r, e.r * 0.75);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (e.type === 4) {
+      // Firewall Shield Core: Octagon with rotating frontal shield arc
+      ctx.translate(e.x, e.y);
+      ctx.strokeStyle = '#00ffcc';
+      ctx.fillStyle = 'rgba(0, 255, 204, 0.2)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00ffcc';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const ha = (k * Math.PI) / 4;
+        const hx = Math.cos(ha) * e.r, hy = Math.sin(ha) * e.r;
+        if (k === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const sa = e.shieldAngle || 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#00ffcc';
+      ctx.beginPath();
+      ctx.arc(0, 0, e.r + 6, sa - 0.9, sa + 0.9);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect(-15, -e.r - 12, 30, 4);
+      ctx.fillStyle = '#00ffcc';
+      ctx.fillRect(-15, -e.r - 12, (e.hp / e.maxHp) * 30, 4);
+    } else if (e.type === 5) {
+      // Trojan Carrier: heavy square processor block
+      ctx.translate(e.x, e.y);
+      ctx.strokeStyle = '#ff003c';
+      ctx.fillStyle = 'rgba(14, 18, 28, 0.9)';
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#ff003c';
+      ctx.lineWidth = 2.8;
+      ctx.strokeRect(-e.r, -e.r, e.r * 2, e.r * 2);
+      ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2);
+
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(-8, -8, 16, 16);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect(-18, -e.r - 12, 36, 4);
+      ctx.fillStyle = '#ff003c';
+      ctx.fillRect(-18, -e.r - 12, (e.hp / e.maxHp) * 36, 4);
+    }
+
+    if (e.freezeTimer > 0) {
+      ctx.strokeStyle = '#a5f3fc';
+      ctx.fillStyle = 'rgba(165, 243, 252, 0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(-e.r - 4, -e.r - 4, (e.r + 4) * 2, (e.r + 4) * 2);
+      ctx.fillRect(-e.r - 4, -e.r - 4, (e.r + 4) * 2, (e.r + 4) * 2);
+    }
+    if (e.stunTimer > 0) {
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.arc(0, 0, e.r + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Bullets & Homing Laser Trails
+  for (const b of bullets) {
+    ctx.save();
+    if (b.trail && b.trail.length > 1) {
+      ctx.strokeStyle = b.color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = b.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(b.trail[0].x, b.trail[0].y);
+      for (let i = 1; i < b.trail.length; i++) ctx.lineTo(b.trail[i].x, b.trail[i].y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = b.color;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = b.color;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Spark Particles (Square fading particles)
+  ctx.save();
+  for (const p of parts) {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.restore();
+
+  // Floating Text Popups
+  ctx.save();
+  ctx.font = 'bold 12px Consolas, monospace';
+  ctx.textAlign = 'center';
+  for (const f of fTexts) {
+    ctx.fillStyle = f.color;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = f.color;
+    ctx.globalAlpha = Math.max(0, f.life / f.maxLife);
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.restore();
+
+  // Wave Banner
+  if (waveBannerTimer > 0) {
+    ctx.save();
+    ctx.font = 'bold 14px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00f0ff';
+    ctx.globalAlpha = Math.min(1, waveBannerTimer);
+    ctx.fillText(waveBanner, cx, cy - 75);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+let lastTime = performance.now();
+function gameLoop(now) {
+  const dt = Math.min(0.08, (now - lastTime) / 1000);
+  lastTime = now;
+
+  try {
+    if (gameState === 'PLAYING') {
+      update(dt);
+    }
+    render(dt);
+  } catch (err) {
+    console.error('Frame execution error caught:', err);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+DOM.startBtn.addEventListener('click', () => {
+  getAudio();
+  startStoryCutscene();
+});
+
+DOM.storyClickBtn.addEventListener('click', () => {
+  triggerInfectionAlert();
+});
+
+DOM.storyStartBtn.addEventListener('click', () => {
+  beginGameFromStory();
+});
+
+DOM.storySkipBtn.addEventListener('click', () => {
+  beginGameFromStory();
+});
+
+DOM.vicRebootBtn.addEventListener('click', () => {
+  DOM.victoryModal.classList.add('hidden');
+  resetGame();
+  gameState = 'PLAYING';
+  getAudio();
+});
+
+DOM.bsodRetryBtn.addEventListener('click', () => {
+  retryFromBSOD();
+});
+
+})();
+</script>
+</body>
+</html>
