@@ -1751,8 +1751,8 @@ function update(dt) {
           startWave(levelWave + 1);
         }
       }
-    } else {
-      // Level cleared! Open Quantum Portal!
+    } else if (warpTimer <= 0) {
+      // Level cleared! Open Quantum Portal (only when not actively teleporting)
       if (!portal.active) {
         portal.active = true;
         portal.x = cx;
@@ -1770,7 +1770,7 @@ function update(dt) {
   if (waveBannerTimer > 0 && waveBannerTimer < 900) waveBannerTimer -= dt;
 
   // Quantum Portal mechanics & electrical particles
-  if (portal.active) {
+  if (portal.active && warpTimer <= 0) {
     portal.rot += 2.2 * dt;
     portal.pulse = Math.sin(gameTime * 4) * 3;
 
@@ -1799,21 +1799,30 @@ function update(dt) {
     }
 
     const distP = Math.hypot(nodeA.x - portal.x, nodeA.y - portal.y);
-    if (distP < portal.r + nodeA.r) {
+    if (distP < portal.r + nodeA.r && warpTimer <= 0) {
       portal.active = false;
       if (portal.sparks) portal.sparks.length = 0;
-      warpTimer = 1.1;
+      warpTimer = 1.0;
+      waveBannerTimer = 0;
+      waveBanner = '';
       sfx.warp();
       shake = 3;
-      spawnSparks(portal.x, portal.y, 30, '#00f0ff');
-      spawnSparks(portal.x, portal.y, 20, '#ffffff');
+      spawnSparks(portal.x, portal.y, 35, '#00f0ff');
+      spawnSparks(portal.x, portal.y, 25, '#ffffff');
     }
   }
 
-  // Hyperspace warp timer
+  // Automatic Hyperspace warp execution
   if (warpTimer > 0) {
     warpTimer -= dt;
+    // Smoothly pull Node A into singularity center automatically
+    nodeA.x += (cx - nodeA.x) * (1 - Math.exp(-12 * dt));
+    nodeA.y += (cy - nodeA.y) * (1 - Math.exp(-12 * dt));
+    nodeA.vx = 0; nodeA.vy = 0;
+
     if (warpTimer <= 0) {
+      warpTimer = 0;
+      portal.active = false;
       if (currentLevelIndex + 1 < LEVELS.length) {
         loadLevel(currentLevelIndex + 1);
       } else {
@@ -2173,7 +2182,7 @@ function render(dt) {
   ctx.restore();
 
   // Quantum Portal Gateway Drawing (Electrical Particle Singularity)
-  if (portal.active) {
+  if (portal.active && warpTimer <= 0) {
     ctx.save();
     ctx.translate(portal.x, portal.y);
 
@@ -2620,7 +2629,7 @@ function render(dt) {
   ctx.restore();
 
   // Wave Banner
-  if (waveBannerTimer > 0) {
+  if (waveBannerTimer > 0 && warpTimer <= 0) {
     ctx.save();
     ctx.font = 'bold 14px Consolas, monospace';
     ctx.textAlign = 'center';
